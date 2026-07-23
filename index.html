@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente Docente GEI – Mendoza</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#F5F7FA;color:#1C2B3A;font-size:14px}
+  input,select,button{font-family:inherit}
+
+  /* HEADER */
+  .header{background:#1A3A5C;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  .header h1{font-size:16px;font-weight:800}
+  .header p{font-size:10px;opacity:.7;margin-top:2px}
+  .header-stats{font-size:11px;opacity:.75;text-align:right;line-height:1.6}
+
+  /* TABS */
+  .tabs{background:#fff;border-bottom:1px solid #DDE3EC;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{padding:11px 14px;border:none;background:none;color:#6B7C93;border-bottom:2.5px solid transparent;font-weight:500;font-size:12px;cursor:pointer;white-space:nowrap}
+  .tab.active{color:#2E6DA4;border-bottom-color:#2E6DA4;font-weight:700}
+
+  /* CONTENIDO */
+  .content{padding:14px 16px;max-width:1200px;margin:0 auto}
+
+  /* CARD */
+  .card{background:#fff;border-radius:10px;border:1px solid #DDE3EC;padding:14px;margin-bottom:12px}
+  .card-title{font-weight:700;color:#1A3A5C;font-size:13px;margin-bottom:10px}
+
+  /* FILTROS */
+  .filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .filtros label{font-size:11px;font-weight:700;color:#1A3A5C}
+
+  /* BOTONES */
+  .btn{border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid;transition:all .15s}
+  .btn-azul{background:#2E6DA4;color:#fff;border-color:#2E6DA4}
+  .btn-verde{background:#27AE60;color:#fff;border-color:#27AE60}
+  .btn-rojo{background:#C0392B;color:#fff;border-color:#C0392B}
+  .btn-rojo-o{background:transparent;color:#C0392B;border-color:#C0392B}
+  .btn-amarillo{background:#F39C12;color:#fff;border-color:#F39C12}
+  .btn-sm{padding:3px 10px;font-size:11px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-toggle{background:transparent;color:#1A3A5C;border:1.5px solid #1A3A5C;border-radius:8px;padding:3px 12px;font-size:12px;font-weight:600;cursor:pointer}
+  .btn-toggle.active{background:#1A3A5C;color:#fff}
+
+  /* TABLA */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{padding:7px 8px;text-align:center;border-bottom:1px solid #DDE3EC;color:#6B7C93;font-weight:600}
+  th.left{text-align:left}
+  td{padding:5px 6px;border-bottom:1px solid #DDE3EC;text-align:center}
+  td.left{text-align:left;font-weight:600;padding:7px 10px}
+  tr:nth-child(odd){background:#F5F7FA}
+  tr:nth-child(even){background:#fff}
+  .thead-azul{background:#1A3A5C;color:#fff;padding:9px 14px;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+  .thead-verde{background:rgba(39,174,96,.12);padding:9px 14px;font-weight:700;color:#27AE60;font-size:13px}
+
+  /* BADGES GEI */
+  .badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid}
+  .badge-EP{background:rgba(231,76,60,.13);color:#E74C3C;border-color:rgba(231,76,60,.33)}
+  .badge-EA{background:rgba(230,126,22,.13);color:#E67E22;border-color:rgba(230,126,22,.33)}
+  .badge-SA{background:rgba(39,174,96,.13);color:#27AE60;border-color:rgba(39,174,96,.33)}
+  .badge-NS{background:rgba(41,128,185,.13);color:#2980B9;border-color:rgba(41,128,185,.33)}
+
+  /* SELECT GEI */
+  select.gei{border-radius:6px;padding:3px 4px;font-size:11px;font-weight:600;width:100%;cursor:pointer;border:1px solid #DDE3EC}
+  select.gei-EP{border-color:#E74C3C;color:#E74C3C;background:rgba(231,76,60,.08)}
+  select.gei-EA{border-color:#E67E22;color:#E67E22;background:rgba(230,126,22,.08)}
+  select.gei-SA{border-color:#27AE60;color:#27AE60;background:rgba(39,174,96,.08)}
+  select.gei-NS{border-color:#2980B9;color:#2980B9;background:rgba(41,128,185,.08)}
+
+  /* SELECT normal */
+  select.sel{border:1px solid #DDE3EC;border-radius:8px;padding:5px 10px;font-size:12px;background:#fff;color:#1C2B3A}
+
+  /* CHAT */
+  .chat-box{display:flex;flex-direction:column;height:calc(100vh - 160px);background:#F5F7FA;border-radius:12px;overflow:hidden;border:1px solid #DDE3EC}
+  .chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+  .msg-user{align-self:flex-end;max-width:82%}
+  .msg-bot{align-self:flex-start;max-width:82%}
+  .msg-label{font-size:10px;color:#6B7C93;margin-bottom:2px;font-weight:600}
+  .bubble-user{background:#2E6DA4;color:#fff;border-radius:14px 14px 4px 14px;padding:10px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+  .bubble-bot{background:#fff;color:#1C2B3A;border:1px solid #DDE3EC;border-radius:4px 14px 14px 14px;padding:10px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+  .chat-sugs{padding:7px 14px;border-top:1px solid #DDE3EC;display:flex;flex-wrap:wrap;gap:5px}
+  .sug{background:rgba(26,58,92,.08);color:#1A3A5C;border:1px solid rgba(26,58,92,.2);border-radius:20px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:500}
+  .chat-input{padding:10px 12px;border-top:1px solid #DDE3EC;display:flex;gap:8px}
+  .chat-input input{flex:1;border:1px solid #DDE3EC;border-radius:8px;padding:9px 12px;font-size:13px;outline:none}
+
+  /* ALUMNOS */
+  .alumno-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid #DDE3EC;flex-wrap:wrap}
+  .alumno-nombre{flex:1;min-width:130px}
+  .alumno-nombre strong{display:block;font-size:13px}
+  .alumno-nombre span{font-size:11px;color:#6B7C93}
+
+  /* APS */
+  .area-list{display:flex;flex-direction:column;gap:2px}
+  .area-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;cursor:pointer}
+  .area-item:hover{background:#F5F7FA}
+  .area-item.active{background:rgba(26,58,92,.12)}
+  .area-item span{font-size:12px}
+  .area-badge{font-size:10px;color:#6B7C93;background:#F5F7FA;padding:1px 5px;border-radius:4px}
+  .ap-item{display:flex;justify-content:space-between;align-items:center;background:#F5F7FA;border-radius:8px;padding:7px 11px;margin-bottom:6px}
+  .ap-item span{font-size:12px}
+  .btn-x{background:none;border:none;cursor:pointer;color:#C0392B;font-size:16px;line-height:1;padding:0 4px}
+
+  /* LEYENDA */
+  .leyenda{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+
+  /* NOTA */
+  .nota-normativa{background:#FFF8E1;border:1px solid #F39C12;border-radius:10px;padding:11px;font-size:12px;color:#7D4E00;margin-top:10px}
+
+  /* LLAMADOS */
+  .llamados-ctrl{display:flex;align-items:center;gap:4px}
+  .btn-pm{background:none;border:none;cursor:pointer;font-size:15px;padding:0 2px}
+
+  input.inp{border:1px solid #DDE3EC;border-radius:8px;padding:7px 11px;font-size:13px}
+  input.inp-sm{border:1px solid #DDE3EC;border-radius:8px;padding:5px 8px;font-size:12px}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .ml-auto{margin-left:auto}
+  .hidden{display:none}
+  .empty{padding:20px;text-align:center;color:#6B7C93;font-size:13px}
+
+  @media(max-width:600px){
+    .content{padding:10px 10px}
+    .card{padding:10px}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>📚 Asistente Docente IA</h1>
+    <p>Sistema GEI · Mendoza · Primario 1° a 7° · 💾 Guardado automático</p>
+  </div>
+  <div class="header-stats" id="headerStats">0 alumnos</div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('chat')">🤖 Asistente IA</button>
+  <button class="tab" onclick="showTab('planilla')">📋 Calificaciones</button>
+  <button class="tab" onclick="showTab('cierre')">📊 Cierre</button>
+  <button class="tab" onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
+  <button class="tab" onclick="showTab('aps')">⚙️ Aprendizajes</button>
+</div>
+
+<div class="content">
+
+  <!-- ── TAB CHAT ── -->
+  <div id="tab-chat">
+    <div class="chat-box">
+      <div class="chat-msgs" id="chatMsgs">
+        <div class="msg-bot">
+          <div class="msg-label">🤖 Asistente GEI</div>
+          <div class="bubble-bot">¡Hola, Profesora! Soy tu asistente docente GEI.
+
+Puedo ayudarte a:
+• Cargar calificaciones («SA a Lucía en Matemática período 1»)
+• Registrar llamados de atención
+• Consultar promedios por alumno o grado
+• Responder dudas sobre la normativa GEI Mendoza
+
+¿Qué necesitás hoy?</div>
+        </div>
+      </div>
+      <div class="chat-sugs">
+        <button class="sug" onclick="setSug('SA a Lucía en Matemática período 1')">SA a Lucía en Matemática período 1</button>
+        <button class="sug" onclick="setSug('Llamado a Mateo por conducta')">Llamado a Mateo por conducta</button>
+        <button class="sug" onclick="setSug('¿Cómo va el grado 3°?')">¿Cómo va el grado 3°?</button>
+        <button class="sug" onclick="setSug('¿Qué es la escala GEI?')">¿Qué es la escala GEI?</button>
+      </div>
+      <div class="chat-input">
+        <input id="chatInput" type="text" placeholder="Escribí una instrucción al asistente..." onkeydown="if(event.key==='Enter')enviarChat()">
+        <button class="btn btn-azul" onclick="enviarChat()" id="btnEnviar">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB PLANILLA ── -->
+  <div id="tab-planilla" class="hidden">
+    <div class="card">
+      <div class="filtros">
+        <label>VER POR:</label>
+        <button class="btn-toggle active" id="btnGrado" onclick="setModoP('grado')">Grado</button>
+        <button class="btn-toggle" id="btnAlumno" onclick="setModoP('alumno')">Alumno</button>
+        <select class="sel" id="pGrado" onchange="renderPlanilla()">
+          <option>1°</option><option>2°</option><option selected>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
+        </select>
+        <select class="sel hidden" id="pAlumnoSel" onchange="renderPlanilla()"></select>
+        <select class="sel" id="pArea" onchange="renderPlanilla()"></select>
+        <select class="sel" id="pPeriodo" onchange="renderPlanilla()">
+          <option>1° Período</option><option>2° Período</option><option>3° Período</option><option>Cierre Anual</option>
+        </select>
+        <div class="ml-auto row">
+          <button class="btn btn-verde btn-sm" onclick="exportExcel()">📥 Excel</button>
+          <button class="btn btn-rojo btn-sm" onclick="exportPDF()">🖨️ PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="planillaWrap"></div>
+    <div class="leyenda" id="leyendaP"></div>
+  </div>
+
+  <!-- ── TAB CIERRE ── -->
+  <div id="tab-cierre" class="hidden">
+    <div class="card">
+      <div class="filtros">
+        <span style="font-weight:700;color:#1A3A5C;font-size:13px">📊 CIERRE DE PERÍODO</span>
+        <select class="sel" id="cGrado" onchange="renderCierre()">
+          <option>1°</option><option>2°</option><option selected>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
+        </select>
+        <select class="sel" id="cPeriodo" onchange="renderCierre()">
+          <option>1° Período</option><option>2° Período</option><option>3° Período</option><option>Cierre Anual</option>
+        </select>
+        <div class="ml-auto row">
+          <button class="btn btn-verde btn-sm" onclick="exportExcelCierre()">📥 Excel</button>
+          <button class="btn btn-rojo btn-sm" onclick="exportPDFCierre()">🖨️ PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="cierreWrap"></div>
+    <div class="nota-normativa">
+      <strong>📌 Normativa GEI Mendoza:</strong> Escala cualitativa EP·EA·SA·NS. Cierre anual: promedio igual de los 3 períodos. Convivencia calculada según llamados de atención registrados (0→SA · 1→EA · 2+→EP).
+    </div>
+  </div>
+
+  <!-- ── TAB ALUMNOS ── -->
+  <div id="tab-alumnos" class="hidden">
+
+    <!-- IMPORTAR EXCEL -->
+    <div class="card" style="border:2px dashed #2E6DA4;background:rgba(46,109,164,.04)">
+      <div class="card-title" style="color:#2E6DA4">📂 Importar desde Excel</div>
+      <p style="font-size:12px;color:#6B7C93;margin-bottom:10px">
+        El archivo Excel debe tener una hoja con columnas: <strong>Nombre</strong> y <strong>Grado</strong>
+        (ej: "García, Lucía" — "3°"). También puede tener columnas de calificaciones con el formato
+        <strong>Area__Periodo__AP</strong> (ej: "Matemática__1° Período__Geometría").
+      </p>
+      <div class="row">
+        <label class="btn btn-azul" style="cursor:pointer;display:inline-block">
+          📂 Elegir archivo .xlsx
+          <input type="file" id="inputExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
+        </label>
+        <button class="btn btn-verde btn-sm" onclick="descargarPlantilla()">⬇️ Descargar plantilla</button>
+      </div>
+      <div id="importMsg" style="margin-top:10px;font-size:12px;display:none"></div>
+    </div>
+
+    <!-- AGREGAR MANUAL -->
+    <div class="card">
+      <div class="card-title">➕ Agregar Alumno/a manualmente</div>
+      <div class="row">
+        <input class="inp" id="nuevoNombre" placeholder="Apellido, Nombre" style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')agregarAlumno()">
+        <select class="sel" id="nuevoGrado">
+          <option>1°</option><option>2°</option><option selected>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
+        </select>
+        <button class="btn btn-verde" onclick="agregarAlumno()">Agregar</button>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;border:1px solid #DDE3EC;overflow:hidden">
+      <div style="background:#1A3A5C;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:700;font-size:13px" id="alumnosTitle">👨‍🎓 Alumnos</span>
+        <select class="sel" id="filtroGrado" onchange="renderAlumnos()" style="font-size:12px;border:none">
+          <option value="Todos">Todos los grados</option>
+          <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
+        </select>
+      </div>
+      <div id="alumnosLista"></div>
+    </div>
+  </div>
+
+  <!-- ── TAB APS ── -->
+  <div id="tab-aps" class="hidden">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-weight:700;color:#1A3A5C;font-size:13px">⚙️ Aprendizajes Prioritarios por Área</div>
+        <div style="font-size:11px;color:#6B7C93;margin-top:2px">Personalizá las áreas y los APs según tu planificación</div>
+      </div>
+      <button class="btn btn-azul" id="btnGuardarAPs" onclick="guardarAPs()">💾 Guardar</button>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;color:#1A3A5C;font-size:12px;margin-bottom:8px">➕ Nueva área curricular</div>
+      <div class="row">
+        <input class="inp" id="nuevaArea" placeholder="Nombre del área" style="flex:1" onkeydown="if(event.key==='Enter')agregarArea()">
+        <button class="btn btn-verde btn-sm" onclick="agregarArea()">Agregar área</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px 1fr;gap:12px">
+      <div class="card" style="padding:8px">
+        <div style="font-size:11px;font-weight:700;color:#6B7C93;padding:4px 8px;margin-bottom:4px">ÁREAS</div>
+        <div class="area-list" id="areaList"></div>
+      </div>
+      <div class="card" id="apPanel">
+        <div style="color:#6B7C93;font-size:13px">Seleccioná un área de la lista</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ─── ESTADO ───────────────────────────────────────────────────────────────────
+const GEI = {
+  EP:{label:"En Proceso",valor:1,color:"#E74C3C"},
+  EA:{label:"En Avance",valor:2,color:"#E67E22"},
+  SA:{label:"Satisfactorio",valor:3,color:"#27AE60"},
+  NS:{label:"Notable Superación",valor:4,color:"#2980B9"}
+};
+const PERIODOS=["1° Período","2° Período","3° Período","Cierre Anual"];
+const GRADOS=["1°","2°","3°","4°","5°","6°","7°"];
+
+const APS_DEFAULT={
+  "Matemática":["Números y operaciones","Geometría","Medida","Estadística"],
+  "Lengua":["Lectura y comprensión","Escritura","Gramática","Oralidad"],
+  "Cs. Naturales":["Seres vivos","Materia y energía","La Tierra"],
+  "Cs. Sociales":["Sociedades y territorios","Historia","Geografía"],
+  "Ed. Física":["Habilidades motrices","Juego","Vida saludable"],
+  "Ed. Artística":["Expresión plástica","Música","Teatro"],
+  "Inglés":["Comprensión oral","Expresión escrita","Vocabulario"],
+  "Tecnología":["Pensamiento computacional","Diseño tecnológico"],
+  "Convivencia":["Respeto","Participación","Responsabilidad","Solidaridad"]
+};
+
+const ALUMNOS_EJ=[
+  {id:1,nombre:"García, Lucía",grado:"3°"},
+  {id:2,nombre:"Pérez, Mateo",grado:"3°"},
+  {id:3,nombre:"López, Valentina",grado:"3°"},
+  {id:4,nombre:"Rodríguez, Tomás",grado:"4°"},
+  {id:5,nombre:"Martínez, Sofía",grado:"4°"}
+];
+
+function lsLoad(k,d){try{const v=localStorage.getItem("gdoc_"+k);return v?JSON.parse(v):d;}catch{return d;}}
+function lsSave(k,v){try{localStorage.setItem("gdoc_"+k,JSON.stringify(v));}catch{}}
+
+let alumnos   = lsLoad("alumnos",   ALUMNOS_EJ);
+let calif     = lsLoad("calif",     {});
+let llamados  = lsLoad("llamados",  {});
+let aps       = lsLoad("aps",       APS_DEFAULT);
+let apsLocal  = JSON.parse(JSON.stringify(aps)); // copia editable
+let areaEdActual = Object.keys(aps)[0];
+let nextId    = Math.max(...alumnos.map(a=>a.id),0)+1;
+let modoP     = "grado"; // planilla: grado | alumno
+let tabActual = "chat";
+let chatLoading = false;
+
+function guardarTodo(){
+  lsSave("alumnos",alumnos);
+  lsSave("calif",calif);
+  lsSave("llamados",llamados);
+  lsSave("aps",aps);
+  updateHeaderStats();
+}
+
+function updateHeaderStats(){
+  const nCal=Object.values(calif).filter(Boolean).length;
+  document.getElementById("headerStats").innerHTML=`${alumnos.length} alumnos · ${nCal} notas`;
+}
+
+// ─── HELPERS GEI ─────────────────────────────────────────────────────────────
+function promedioGEI(arr){
+  const vals=arr.filter(c=>GEI[c]).map(c=>GEI[c].valor);
+  if(!vals.length)return null;
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  if(avg>=3.5)return"NS"; if(avg>=2.5)return"SA"; if(avg>=1.5)return"EA"; return"EP";
+}
+function convivencia(n){return n===0?"SA":n===1?"EA":"EP";}
+function badge(cod){
+  if(!GEI[cod])return"—";
+  return`<span class="badge badge-${cod}">${cod} · ${GEI[cod].label}</span>`;
+}
+function badgeSolo(cod){
+  if(!GEI[cod])return"<span style='color:#DDE3EC'>—</span>";
+  const g=GEI[cod];
+  return`<span style="background:${g.color}20;color:${g.color};border-radius:5px;padding:2px 5px;font-weight:700;font-size:11px;border:1px solid ${g.color}44">${cod}</span>`;
+}
+function getN(id,area,periodo,ap){return calif[`${id}__${area}__${periodo}__${ap}`]||"";}
+function promArea(id,area,periodo){
+  if(!aps[area])return null;
+  const ns=aps[area].map(ap=>getN(id,area,periodo,ap)).filter(Boolean);
+  return promedioGEI(ns);
+}
+function promAnual(id,area){
+  const ns=["1° Período","2° Período","3° Período"].map(p=>promArea(id,area,p)).filter(Boolean);
+  return promedioGEI(ns);
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function showTab(t){
+  tabActual=t;
+  document.querySelectorAll(".tab").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll("[id^='tab-']").forEach(el=>el.classList.add("hidden"));
+  event.target.classList.add("active");
+  document.getElementById("tab-"+t).classList.remove("hidden");
+  if(t==="planilla"){initSelectArea();renderPlanilla();}
+  if(t==="cierre"){renderCierre();}
+  if(t==="alumnos"){renderAlumnos();}
+  if(t==="aps"){renderAPs();}
+}
+
+// ─── CHAT IA ──────────────────────────────────────────────────────────────────
+function setSug(txt){document.getElementById("chatInput").value=txt;}
+
+async function enviarChat(){
+  const inp=document.getElementById("chatInput");
+  const msg=inp.value.trim();
+  if(!msg||chatLoading)return;
+  inp.value=""; chatLoading=true;
+  document.getElementById("btnEnviar").disabled=true;
+
+  appendMsg("usuario",msg);
+
+  const sys=`Eres asistente docente del sistema educativo de Mendoza. Escala GEI: EP=1,EA=2,SA=3,NS=4. Primario 1° a 7°.
+Alumnos: ${alumnos.map(a=>`ID:${a.id} ${a.nombre}(${a.grado})`).join(" | ")}
+Calificaciones: ${Object.entries(calif).filter(([,v])=>v).slice(0,20).map(([k,v])=>`${k}→${v}`).join(" | ")||"Ninguna"}
+Llamados: ${Object.entries(llamados).map(([id,n])=>`ID${id}:${n}`).join(" | ")||"Ninguno"}
+Si el docente quiere cargar nota incluí al final: ACCION_JSON: {"tipo":"cargar_nota","datos":{"alumnoId":X,"area":"...","periodo":"...","aprendizaje":"...","nota":"EP|EA|SA|NS"}}
+Si quiere registrar llamado: ACCION_JSON: {"tipo":"registrar_llamado","datos":{"alumnoId":X,"motivo":"..."}}
+Áreas válidas: ${Object.keys(aps).join(", ")}
+Períodos válidos: 1° Período, 2° Período, 3° Período, Cierre Anual
+Respondé en español, brevemente.`;
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:msg}]})
+    });
+    const data=await res.json();
+    let texto=data.content?.map(b=>b.text||"").join("")||"Sin respuesta.";
+    const match=texto.match(/ACCION_JSON:\s*(\{[\s\S]*?\})/);
+    if(match){try{ejecutarAccion(JSON.parse(match[1]));}catch{}}
+    texto=texto.replace(/ACCION_JSON:[\s\S]*$/,"").trim();
+    appendMsg("bot",texto);
+  }catch{appendMsg("bot","Error de conexión. Verificá tu red.");}
+
+  chatLoading=false;
+  document.getElementById("btnEnviar").disabled=false;
+}
+
+function appendMsg(tipo,texto){
+  const box=document.getElementById("chatMsgs");
+  const div=document.createElement("div");
+  div.className=tipo==="usuario"?"msg-user":"msg-bot";
+  if(tipo==="bot")div.innerHTML=`<div class="msg-label">🤖 Asistente GEI</div><div class="bubble-bot">${escHtml(texto)}</div>`;
+  else div.innerHTML=`<div class="bubble-user">${escHtml(texto)}</div>`;
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+
+function escHtml(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function ejecutarAccion(a){
+  if(a.tipo==="cargar_nota"){
+    const{alumnoId,area,periodo,aprendizaje,nota}=a.datos||{};
+    if(alumnoId&&area&&periodo&&aprendizaje&&nota){
+      calif[`${alumnoId}__${area}__${periodo}__${aprendizaje}`]=nota;
+      guardarTodo();
+      if(tabActual==="planilla")renderPlanilla();
+    }
+  }
+  if(a.tipo==="registrar_llamado"){
+    const{alumnoId}=a.datos||{};
+    if(alumnoId){llamados[alumnoId]=(llamados[alumnoId]||0)+1;guardarTodo();if(tabActual==="alumnos")renderAlumnos();}
+  }
+}
+
+// ─── PLANILLA ─────────────────────────────────────────────────────────────────
+function initSelectArea(){
+  const sel=document.getElementById("pArea");
+  const cur=sel.value;
+  sel.innerHTML=Object.keys(aps).map(a=>`<option ${a===cur?"selected":""}>${a}</option>`).join("");
+}
+
+function setModoP(m){
+  modoP=m;
+  document.getElementById("btnGrado").classList.toggle("active",m==="grado");
+  document.getElementById("btnAlumno").classList.toggle("active",m==="alumno");
+  document.getElementById("pAlumnoSel").classList.toggle("hidden",m==="grado");
+  if(m==="alumno")fillAlumnoSel();
+  renderPlanilla();
+}
+
+function fillAlumnoSel(){
+  const grado=document.getElementById("pGrado").value;
+  const sel=document.getElementById("pAlumnoSel");
+  const fils=alumnos.filter(a=>a.grado===grado);
+  sel.innerHTML=`<option value="">— Seleccioná —</option>`+fils.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join("");
+  renderPlanilla();
+}
+
+function renderPlanilla(){
+  const grado=document.getElementById("pGrado").value;
+  const area=document.getElementById("pArea").value||Object.keys(aps)[0];
+  const periodo=document.getElementById("pPeriodo").value;
+  const apsl=aps[area]||[];
+  let fils=alumnos.filter(a=>a.grado===grado);
+  if(modoP==="alumno"){const id=document.getElementById("pAlumnoSel").value;if(id)fils=fils.filter(a=>a.id==id);}
+
+  let html=`<div style="background:#1A3A5C;color:#fff;padding:9px 14px;font-weight:700;font-size:13px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between">
+    <span>${area} · ${periodo} · ${grado} Grado</span><span style="opacity:.7;font-size:11px;font-weight:400">Sistema GEI — Mendoza</span>
+  </div>
+  <div class="table-wrap" style="border:1px solid #DDE3EC;border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
+  <table><thead><tr>
+    <th class="left" style="min-width:150px;background:rgba(26,58,92,.05)">Alumno/a</th>
+    ${apsl.map(ap=>`<th style="min-width:90px;background:rgba(26,58,92,.05)">${ap}</th>`).join("")}
+    <th style="min-width:75px;color:#2E6DA4;background:rgba(26,58,92,.05)">Período</th>
+    <th style="color:#C0392B;background:rgba(26,58,92,.05)">Convivencia</th>
+    <th style="color:#8E44AD;background:rgba(26,58,92,.05)">Anual</th>
+  </tr></thead><tbody>`;
+
+  if(!fils.length){html+=`<tr><td colspan="${apsl.length+4}" class="empty">Sin alumnos en ${grado} grado.</td></tr>`;}
+  fils.forEach(al=>{
+    const pp=promArea(al.id,area,periodo), pa=promAnual(al.id,area);
+    const ll=llamados[al.id]||0, cv=convivencia(ll);
+    html+=`<tr>
+      <td class="left">${escHtml(al.nombre)}</td>
+      ${apsl.map(ap=>{
+        const key=`${al.id}__${area}__${periodo}__${ap}`,n=calif[key]||"";
+        const cls=n?`gei gei-${n}`:"gei";
+        return`<td><select class="${cls}" onchange="setNota('${key}',this.value,this)" data-key="${key}">
+          <option value="">—</option>${Object.keys(GEI).map(k=>`<option value="${k}"${n===k?" selected":""}>${k}</option>`).join("")}
+        </select></td>`;
+      }).join("")}
+      <td>${pp?badge(pp):"<span style='color:#DDE3EC'>—</span>"}</td>
+      <td><div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        ${badge(cv)}
+        <div class="llamados-ctrl">
+          <button class="btn-pm" onclick="cambiarLlamado(${al.id},-1)">➖</button>
+          <span style="font-size:11px;font-weight:700;color:${ll>0?"#C0392B":"#6B7C93"}">${ll}</span>
+          <button class="btn-pm" onclick="cambiarLlamado(${al.id},1)">➕</button>
+        </div>
+      </div></td>
+      <td>${pa?badge(pa):"<span style='color:#DDE3EC'>—</span>"}</td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table></div>`;
+  document.getElementById("planillaWrap").innerHTML=html;
+
+  // Leyenda
+  document.getElementById("leyendaP").innerHTML=
+    `<span style="font-size:11px;color:#6B7C93;font-weight:600;align-self:center">Escala GEI:</span>`+
+    Object.entries(GEI).map(([k,v])=>`<span class="badge badge-${k}">${k} = ${v.label}</span>`).join("");
+}
+
+function setNota(key,val,sel){
+  calif[key]=val;
+  sel.className=val?`gei gei-${val}`:"gei";
+  guardarTodo();
+}
+
+function cambiarLlamado(id,delta){
+  llamados[id]=Math.max(0,(llamados[id]||0)+delta);
+  guardarTodo();
+  renderPlanilla();
+}
+
+// ─── CIERRE ───────────────────────────────────────────────────────────────────
+function renderCierre(){
+  const grado=document.getElementById("cGrado").value;
+  const periodo=document.getElementById("cPeriodo").value;
+  const areas=Object.keys(aps);
+  const fils=alumnos.filter(a=>a.grado===grado);
+
+  let html=`<div class="thead-verde" style="border-radius:10px 10px 0 0">${grado} Grado · ${periodo} — Resumen GEI</div>
+  <div class="table-wrap" style="border:1px solid #DDE3EC;border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
+  <table><thead><tr>
+    <th class="left" style="min-width:170px">Alumno/a</th>
+    ${areas.map(a=>`<th style="font-size:11px">${a}</th>`).join("")}
+  </tr></thead><tbody>`;
+
+  if(!fils.length){html+=`<tr><td colspan="${areas.length+1}" class="empty">Sin alumnos en ${grado} grado.</td></tr>`;}
+  fils.forEach(al=>{
+    html+=`<tr><td class="left">${escHtml(al.nombre)}</td>
+    ${areas.map(area=>{
+      const p=area==="Convivencia"?convivencia(llamados[al.id]||0):promArea(al.id,area,periodo);
+      return`<td>${badgeSolo(p)}</td>`;
+    }).join("")}</tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById("cierreWrap").innerHTML=html;
+}
+
+// ─── ALUMNOS ──────────────────────────────────────────────────────────────────
+function renderAlumnos(){
+  const filtro=document.getElementById("filtroGrado").value;
+  const fils=filtro==="Todos"?alumnos:alumnos.filter(a=>a.grado===filtro);
+  document.getElementById("alumnosTitle").textContent=`👨‍🎓 Alumnos (${fils.length})`;
+  let html="";
+  if(!fils.length){html=`<div class="empty">Sin alumnos. Agregá el primero arriba.</div>`;}
+  fils.forEach((al,i)=>{
+    const ll=llamados[al.id]||0, cv=convivencia(ll);
+    html+=`<div class="alumno-row" style="background:${i%2?"#F5F7FA":"#fff"}">
+      <div class="alumno-nombre"><strong>${escHtml(al.nombre)}</strong><span>${al.grado} Grado · ID ${al.id}</span></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:#C0392B;font-weight:600">⚠️ ${ll}</span>${badge(cv)}
+      </div>
+      <div class="row">
+        <button class="btn btn-amarillo btn-sm" onclick="addLlamado(${al.id})">+ Llamado</button>
+        <button class="btn btn-rojo-o btn-sm" onclick="eliminarAlumno(${al.id})">Eliminar</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById("alumnosLista").innerHTML=html;
+  updateHeaderStats();
+}
+
+function agregarAlumno(){
+  const nombre=document.getElementById("nuevoNombre").value.trim();
+  const grado=document.getElementById("nuevoGrado").value;
+  if(!nombre)return;
+  alumnos.push({id:nextId++,nombre,grado});
+  document.getElementById("nuevoNombre").value="";
+  guardarTodo(); renderAlumnos();
+}
+
+function eliminarAlumno(id){
+  if(!confirm("¿Eliminar este alumno?"))return;
+  alumnos=alumnos.filter(a=>a.id!==id);
+  guardarTodo(); renderAlumnos();
+}
+
+function addLlamado(id){
+  llamados[id]=(llamados[id]||0)+1;
+  guardarTodo(); renderAlumnos();
+}
+
+// ─── APS ──────────────────────────────────────────────────────────────────────
+function renderAPs(){
+  apsLocal=JSON.parse(JSON.stringify(aps));
+  renderAreaList();
+  renderAPPanel();
+}
+
+function renderAreaList(){
+  const areas=Object.keys(apsLocal);
+  document.getElementById("areaList").innerHTML=areas.map(a=>`
+    <div class="area-item${a===areaEdActual?" active":""}" onclick="selArea('${escAtr(a)}')">
+      <span style="font-size:12px;font-weight:${a===areaEdActual?700:400};color:${a===areaEdActual?"#1A3A5C":"#1C2B3A"}">${escHtml(a)}</span>
+      <span class="area-badge">${(apsLocal[a]||[]).length}</span>
+    </div>`).join("");
+}
+
+function selArea(a){
+  areaEdActual=a;
+  renderAreaList();
+  renderAPPanel();
+}
+
+function renderAPPanel(){
+  const a=areaEdActual, lista=apsLocal[a]||[];
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-weight:700;color:#1A3A5C;font-size:13px">${escHtml(a)}</div>
+    <button class="btn btn-rojo-o btn-sm" onclick="eliminarArea('${escAtr(a)}')">Eliminar área</button>
+  </div>`;
+  if(!lista.length)html+=`<div style="color:#6B7C93;font-size:12px;font-style:italic;margin-bottom:12px">Sin aprendizajes. Agregá el primero abajo.</div>`;
+  lista.forEach((ap,i)=>{html+=`<div class="ap-item"><span>${escHtml(ap)}</span><button class="btn-x" onclick="eliminarAP('${escAtr(a)}',${i})">✕</button></div>`;});
+  html+=`<div class="row" style="margin-top:8px">
+    <input class="inp" id="nuevoAP" placeholder="Nuevo aprendizaje prioritario..." style="flex:1" onkeydown="if(event.key==='Enter')agregarAP()">
+    <button class="btn btn-verde btn-sm" onclick="agregarAP()">Agregar AP</button>
+  </div>`;
+  document.getElementById("apPanel").innerHTML=html;
+}
+
+function agregarAP(){
+  const v=document.getElementById("nuevoAP").value.trim();
+  if(!v)return;
+  if(!apsLocal[areaEdActual])apsLocal[areaEdActual]=[];
+  apsLocal[areaEdActual].push(v);
+  renderAreaList(); renderAPPanel();
+}
+
+function eliminarAP(area,idx){
+  apsLocal[area].splice(idx,1);
+  renderAreaList(); renderAPPanel();
+}
+
+function agregarArea(){
+  const v=document.getElementById("nuevaArea").value.trim();
+  if(!v||apsLocal[v])return;
+  apsLocal[v]=[]; areaEdActual=v;
+  document.getElementById("nuevaArea").value="";
+  renderAreaList(); renderAPPanel();
+}
+
+function eliminarArea(a){
+  if(!confirm(`¿Eliminar el área "${a}"?`))return;
+  delete apsLocal[a];
+  areaEdActual=Object.keys(apsLocal)[0]||"";
+  renderAreaList(); renderAPPanel();
+}
+
+function guardarAPs(){
+  aps=JSON.parse(JSON.stringify(apsLocal));
+  lsSave("aps",aps);
+  const btn=document.getElementById("btnGuardarAPs");
+  btn.textContent="✅ Guardado"; btn.className="btn btn-verde";
+  setTimeout(()=>{btn.textContent="💾 Guardar";btn.className="btn btn-azul";},2000);
+  initSelectArea();
+}
+
+function escAtr(s){return s.replace(/'/g,"\\'");}
+
+// ─── EXPORTAR EXCEL ───────────────────────────────────────────────────────────
+function exportExcel(){
+  const grado=document.getElementById("pGrado").value;
+  const periodo=document.getElementById("pPeriodo").value;
+  _exportExcelCore(grado,periodo);
+}
+function exportExcelCierre(){
+  const grado=document.getElementById("cGrado").value;
+  const periodo=document.getElementById("cPeriodo").value;
+  _exportExcelCore(grado,periodo);
+}
+function _exportExcelCore(grado,periodo){
+  const wb=XLSX.utils.book_new();
+  Object.keys(aps).forEach(area=>{
+    const fils=alumnos.filter(a=>a.grado===grado);
+    const apsl=aps[area]||[];
+    const hdr=["Alumno/a",...apsl,"Promedio Período",area==="Convivencia"?"Llamados":""];
+    const rows=fils.map(al=>{
+      const ns=apsl.map(ap=>calif[`${al.id}__${area}__${periodo}__${ap}`]||"");
+      const p=area==="Convivencia"?convivencia(llamados[al.id]||0):promedioGEI(ns.filter(Boolean));
+      return[al.nombre,...ns,p||"—",area==="Convivencia"?(llamados[al.id]||0):""];
+    });
+    const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+    ws["!cols"]=[{wch:24},...apsl.map(()=>({wch:14})),{wch:14},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,ws,area.substring(0,31));
+  });
+  const fils2=alumnos.filter(a=>a.grado===grado);
+  const areas=Object.keys(aps);
+  const ws2=XLSX.utils.aoa_to_sheet([["Alumno/a",...areas],...fils2.map(al=>[
+    al.nombre,...areas.map(area=>{
+      if(area==="Convivencia")return convivencia(llamados[al.id]||0);
+      const ns=(aps[area]||[]).map(ap=>calif[`${al.id}__${area}__${periodo}__${ap}`]||"").filter(Boolean);
+      return promedioGEI(ns)||"—";
+    })
+  ])]);
+  ws2["!cols"]=[{wch:24},...areas.map(()=>({wch:12}))];
+  XLSX.utils.book_append_sheet(wb,ws2,"Resumen GEI");
+  XLSX.writeFile(wb,`GEI_${grado}_${periodo.replace(/[°\s]/g,"")}.xlsx`);
+}
+
+// ─── EXPORTAR PDF ─────────────────────────────────────────────────────────────
+function exportPDF(){
+  const grado=document.getElementById("pGrado").value;
+  const periodo=document.getElementById("pPeriodo").value;
+  _exportPDFCore(grado,periodo);
+}
+function exportPDFCierre(){
+  const grado=document.getElementById("cGrado").value;
+  const periodo=document.getElementById("cPeriodo").value;
+  _exportPDFCore(grado,periodo);
+}
+function _exportPDFCore(grado,periodo){
+  const fils=alumnos.filter(a=>a.grado===grado);
+  const areas=Object.keys(aps);
+  const filas=fils.map(al=>`<tr>
+    <td style="padding:6px 10px;font-weight:600;border:1px solid #ddd">${al.nombre}</td>
+    ${areas.map(area=>{
+      const val=area==="Convivencia"?convivencia(llamados[al.id]||0):(()=>{
+        const ns=(aps[area]||[]).map(ap=>calif[`${al.id}__${area}__${periodo}__${ap}`]||"").filter(Boolean);
+        return promedioGEI(ns)||"—";
+      })();
+      const col=GEI[val]?.color||"#999";
+      return`<td style="padding:6px 8px;text-align:center;border:1px solid #ddd"><span style="background:${col}22;color:${col};border:1px solid ${col}55;border-radius:4px;padding:2px 6px;font-weight:700;font-size:12px">${val}</span></td>`;
+    }).join("")}
+  </tr>`).join("");
+  const w=window.open("","_blank");
+  if(!w){alert("Permitir ventanas emergentes para exportar PDF");return;}
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>GEI ${grado} ${periodo}</title>
+  <style>body{font-family:Arial,sans-serif;padding:30px;color:#1C2B3A}h1{color:#1A3A5C;font-size:18px}h2{color:#2E6DA4;font-size:14px;font-weight:normal;margin-top:0}table{border-collapse:collapse;width:100%;margin-top:16px;font-size:12px}th{background:#1A3A5C;color:#fff;padding:8px;text-align:center;border:1px solid #ddd;font-size:11px}th:first-child{text-align:left}.ley{margin-top:18px;font-size:11px;color:#666;border-top:1px solid #ddd;padding-top:10px}.firma{margin-top:40px;display:flex;gap:60px}.firma div{border-top:1px solid #333;padding-top:6px;font-size:11px;width:200px}@media print{body{padding:15px}}</style>
+  </head><body>
+  <h1>📚 Informe de Calificaciones — Sistema GEI</h1>
+  <h2>Provincia de Mendoza · Nivel Primario · ${grado} Grado · ${periodo}</h2>
+  <table><thead><tr><th style="text-align:left;min-width:180px">Alumno/a</th>${areas.map(a=>`<th>${a}</th>`).join("")}</tr></thead>
+  <tbody>${filas}</tbody></table>
+  <div class="ley"><strong>Escala GEI:</strong> EP=En Proceso · EA=En Avance · SA=Satisfactorio · NS=Notable Superación<br>Convivencia: 0 llamados→SA · 1→EA · 2+→EP</div>
+  <div class="firma"><div>Firma y sello docente</div><div>Firma directivo</div><div>Fecha: ___/___/______</div></div>
+  </body></html>`);
+  w.document.close(); setTimeout(()=>w.print(),600);
+}
+
+// ─── IMPORTAR EXCEL ───────────────────────────────────────────────────────────
+function importarExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:"array"});
+
+      // Buscar hoja de alumnos (primera hoja, o la que se llame "Alumnos")
+      const sheetName = wb.SheetNames.includes("Alumnos") ? "Alumnos" : wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
+
+      if (!rows.length) { showImportMsg("❌ La hoja está vacía.", "error"); return; }
+
+      // Detectar columnas
+      const keys = Object.keys(rows[0]);
+      const colNombre = keys.find(k => /nombre|alumno|apellido/i.test(k)) || keys[0];
+      const colGrado  = keys.find(k => /grado|año|curso/i.test(k)) || keys[1];
+
+      if (!colNombre) { showImportMsg("❌ No se encontró columna 'Nombre'.", "error"); return; }
+
+      let nuevos = 0, actualizados = 0, notasImportadas = 0;
+
+      rows.forEach(row => {
+        const nombre = String(row[colNombre] || "").trim();
+        const gradoRaw = String(row[colGrado] || "").trim();
+        if (!nombre) return;
+
+        // Normalizar grado: "3", "3°", "Tercero" → "3°"
+        const gradoNum = gradoRaw.replace(/[°\s]/g,"").replace(/[a-záéíóú]+/gi,"");
+        const grado = GRADOS.find(g => g.replace("°","") === gradoNum) || gradoRaw || "3°";
+
+        // Buscar si ya existe
+        let al = alumnos.find(a => a.nombre.toLowerCase() === nombre.toLowerCase());
+        if (!al) {
+          al = { id: nextId++, nombre, grado };
+          alumnos.push(al);
+          nuevos++;
+        } else {
+          actualizados++;
+        }
+
+        // Importar columnas de calificaciones: Area__Periodo__AP
+        keys.forEach(k => {
+          if (k === colNombre || k === colGrado) return;
+          const partes = k.split("__");
+          if (partes.length === 3) {
+            const [area, periodo, ap] = partes;
+            const val = String(row[k] || "").trim().toUpperCase();
+            if (GEI[val]) {
+              calif[`${al.id}__${area}__${periodo}__${ap}`] = val;
+              notasImportadas++;
+            }
+          }
+          // Columna llamados
+          if (/llamado/i.test(k)) {
+            const n = parseInt(row[k]) || 0;
+            if (n > 0) llamados[al.id] = n;
+          }
+        });
+      });
+
+      guardarTodo();
+      renderAlumnos();
+      let msg = `✅ Importación completada: ${nuevos} alumno(s) nuevo(s)`;
+      if (actualizados) msg += `, ${actualizados} ya existía(n)`;
+      if (notasImportadas) msg += `, ${notasImportadas} calificaciones importadas`;
+      msg += ".";
+      showImportMsg(msg, "ok");
+    } catch(err) {
+      showImportMsg("❌ Error al leer el archivo: " + err.message, "error");
+    }
+    input.value = ""; // resetear input
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showImportMsg(msg, tipo) {
+  const el = document.getElementById("importMsg");
+  el.style.display = "block";
+  el.style.color = tipo === "ok" ? "#27AE60" : "#C0392B";
+  el.style.background = tipo === "ok" ? "rgba(39,174,96,.08)" : "rgba(192,57,43,.08)";
+  el.style.border = `1px solid ${tipo==="ok"?"#27AE60":"#C0392B"}`;
+  el.style.borderRadius = "8px";
+  el.style.padding = "8px 12px";
+  el.style.fontWeight = "600";
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = "none"; }, 6000);
+}
+
+function descargarPlantilla() {
+  const wb = XLSX.utils.book_new();
+
+  // Hoja Alumnos con columnas de ejemplo
+  const areas = Object.keys(aps);
+  const periodos = ["1° Período","2° Período","3° Período"];
+
+  // Construir encabezados: Nombre, Grado, luego Area__Periodo__AP por cada combinación
+  const headers = ["Nombre", "Grado", "Llamados"];
+  areas.forEach(area => {
+    if (area === "Convivencia") return; // convivencia es automática
+    periodos.forEach(periodo => {
+      (aps[area] || []).forEach(ap => {
+        headers.push(`${area}__${periodo}__${ap}`);
+      });
+    });
+  });
+
+  // Filas de ejemplo
+  const ejemplos = [
+    ["García, Lucía", "3°", 0, ...headers.slice(3).map((h,i) => i===0?"SA":"")],
+    ["Pérez, Mateo",  "3°", 1, ...headers.slice(3).map(()=>"")],
+    ["López, Ana",    "4°", 0, ...headers.slice(3).map(()=>"")],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...ejemplos]);
+  ws["!cols"] = [
+    {wch:22}, {wch:8}, {wch:10},
+    ...headers.slice(3).map(() => ({wch:20}))
+  ];
+
+  // Hoja de instrucciones
+  const instrucciones = [
+    ["INSTRUCCIONES DE IMPORTACIÓN"],
+    [""],
+    ["Columnas obligatorias:"],
+    ["  Nombre   → Apellido y nombre del alumno (ej: García, Lucía)"],
+    ["  Grado    → Grado con ° (ej: 3°)  o solo número (ej: 3)"],
+    [""],
+    ["Columna opcional:"],
+    ["  Llamados → Número de llamados de atención (0, 1, 2...)"],
+    [""],
+    ["Columnas de calificaciones (opcionales):"],
+    ["  Formato: Area__Periodo__AprendizajePrioritario"],
+    ["  Ejemplo: Matemática__1° Período__Geometría"],
+    ["  Valores válidos: EP, EA, SA, NS"],
+    [""],
+    ["Períodos válidos:"],
+    ["  1° Período, 2° Período, 3° Período, Cierre Anual"],
+    [""],
+    ["Áreas disponibles:"],
+    ...Object.keys(aps).map(a => [`  ${a}: ${(aps[a]||[]).join(", ")}`]),
+  ];
+  const wsI = XLSX.utils.aoa_to_sheet(instrucciones);
+  wsI["!cols"] = [{wch:80}];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
+  XLSX.utils.book_append_sheet(wb, wsI, "Instrucciones");
+  XLSX.writeFile(wb, "Plantilla_Importacion_GEI.xlsx");
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+initSelectArea();
+updateHeaderStats();
+</script>
+</body>
+</html>
