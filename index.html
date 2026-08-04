@@ -6,938 +6,1567 @@
 <title>Asistente Docente GEI – Mendoza</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',system-ui,sans-serif;background:#F5F7FA;color:#1C2B3A;font-size:14px}
-  input,select,button{font-family:inherit}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--pri:#4A6572;--pri-d:#3a5462;--green:#4CAF50;--orange:#FF9800;--red:#F44336;--blue:#1976D2;--purple:#9C27B0;--bg:#f0f2f5;--card:#fff;--border:#e0e0e0;--text:#333;--text2:#666;--text3:#999;--radius:10px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+input,select,button,textarea{font-family:inherit;font-size:13px}
+a{color:var(--blue);text-decoration:none}
 
-  /* HEADER */
-  .header{background:#1A3A5C;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.25)}
-  .header h1{font-size:16px;font-weight:800}
-  .header p{font-size:10px;opacity:.7;margin-top:2px}
-  .header-stats{font-size:11px;opacity:.75;text-align:right;line-height:1.6}
+/* HEADER */
+.header{background:var(--pri);color:#fff;display:flex;align-items:center;padding:0 16px;height:50px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.logo{display:flex;align-items:center;gap:6px;font-size:18px;font-weight:800;letter-spacing:1px}
+.logo-bars{display:flex;gap:3px;height:26px;align-items:flex-end}
+.logo-bars span{width:5px;border-radius:2px 2px 0 0}
+.logo-bars span:nth-child(1){height:26px;background:#FF6D00}
+.logo-bars span:nth-child(2){height:20px;background:#FFC107}
+.logo-bars span:nth-child(3){height:14px;background:#4CAF50}
+.header-right{margin-left:auto;font-size:12px;opacity:.8}
+.school-label{margin-left:20px;font-size:12px;opacity:.7}
 
-  /* TABS */
-  .tabs{background:#fff;border-bottom:1px solid #DDE3EC;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tab{padding:11px 14px;border:none;background:none;color:#6B7C93;border-bottom:2.5px solid transparent;font-weight:500;font-size:12px;cursor:pointer;white-space:nowrap}
-  .tab.active{color:#2E6DA4;border-bottom-color:#2E6DA4;font-weight:700}
+/* NAV */
+.nav{background:#fff;border-bottom:1px solid var(--border);display:flex;overflow-x:auto;padding:0 12px}
+.nav button{background:none;border:none;padding:12px 16px;color:var(--text2);font-weight:500;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;font-size:13px}
+.nav button:hover{color:var(--text)}
+.nav button.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
 
-  /* CONTENIDO */
-  .content{padding:14px 16px;max-width:1200px;margin:0 auto}
+/* LAYOUT */
+.page{padding:16px;max-width:1300px;margin:0 auto}
+.hidden{display:none}
 
-  /* CARD */
-  .card{background:#fff;border-radius:10px;border:1px solid #DDE3EC;padding:14px;margin-bottom:12px}
-  .card-title{font-weight:700;color:#1A3A5C;font-size:13px;margin-bottom:10px}
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.card-head h2{font-size:15px;font-weight:700;color:var(--pri)}
+.card-body{padding:16px 18px}
 
-  /* FILTROS */
-  .filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  .filtros label{font-size:11px;font-weight:700;color:#1A3A5C}
+/* BUTTONS */
+.btn{border-radius:6px;padding:7px 16px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.btn-pri{background:var(--blue);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-outline{background:transparent;border:1.5px solid var(--pri);color:var(--pri)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-xs{padding:2px 8px;font-size:10px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:hover{filter:brightness(1.1)}
 
-  /* BOTONES */
-  .btn{border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid;transition:all .15s}
-  .btn-azul{background:#2E6DA4;color:#fff;border-color:#2E6DA4}
-  .btn-verde{background:#27AE60;color:#fff;border-color:#27AE60}
-  .btn-rojo{background:#C0392B;color:#fff;border-color:#C0392B}
-  .btn-rojo-o{background:transparent;color:#C0392B;border-color:#C0392B}
-  .btn-amarillo{background:#F39C12;color:#fff;border-color:#F39C12}
-  .btn-sm{padding:3px 10px;font-size:11px}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .btn-toggle{background:transparent;color:#1A3A5C;border:1.5px solid #1A3A5C;border-radius:8px;padding:3px 12px;font-size:12px;font-weight:600;cursor:pointer}
-  .btn-toggle.active{background:#1A3A5C;color:#fff}
+/* SELECTS / INPUTS */
+.sel{border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:#fff}
+.inp{border:1px solid var(--border);border-radius:6px;padding:7px 11px}
+.inp:focus,.sel:focus{outline:2px solid var(--blue);border-color:var(--blue)}
 
-  /* TABLA */
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  th{padding:7px 8px;text-align:center;border-bottom:1px solid #DDE3EC;color:#6B7C93;font-weight:600}
-  th.left{text-align:left}
-  td{padding:5px 6px;border-bottom:1px solid #DDE3EC;text-align:center}
-  td.left{text-align:left;font-weight:600;padding:7px 10px}
-  tr:nth-child(odd){background:#F5F7FA}
-  tr:nth-child(even){background:#fff}
-  .thead-azul{background:#1A3A5C;color:#fff;padding:9px 14px;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center}
-  .thead-verde{background:rgba(39,174,96,.12);padding:9px 14px;font-weight:700;color:#27AE60;font-size:13px}
+/* TABLES */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse}
+th{padding:8px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--text2);background:#fafafa;border-bottom:2px solid var(--border)}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0;font-size:13px}
+tbody tr:hover{background:#f8fbff}
+th.center,td.center{text-align:center}
 
-  /* BADGES GEI */
-  .badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid}
-  .badge-EP{background:rgba(231,76,60,.13);color:#E74C3C;border-color:rgba(231,76,60,.33)}
-  .badge-EA{background:rgba(230,126,22,.13);color:#E67E22;border-color:rgba(230,126,22,.33)}
-  .badge-SA{background:rgba(39,174,96,.13);color:#27AE60;border-color:rgba(39,174,96,.33)}
-  .badge-NS{background:rgba(41,128,185,.13);color:#2980B9;border-color:rgba(41,128,185,.33)}
+/* BADGES */
+.badge{display:inline-block;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700}
+.badge-green{background:#E8F5E9;color:#2E7D32}
+.badge-orange{background:#FFF3E0;color:#E65100}
+.badge-red{background:#FFEBEE;color:#C62828}
+.badge-blue{background:#E3F2FD;color:#1565C0}
+.badge-purple{background:#F3E5F5;color:#6A1B9A}
 
-  /* SELECT GEI */
-  select.gei{border-radius:6px;padding:3px 4px;font-size:11px;font-weight:600;width:100%;cursor:pointer;border:1px solid #DDE3EC}
-  select.gei-EP{border-color:#E74C3C;color:#E74C3C;background:rgba(231,76,60,.08)}
-  select.gei-EA{border-color:#E67E22;color:#E67E22;background:rgba(230,126,22,.08)}
-  select.gei-SA{border-color:#27AE60;color:#27AE60;background:rgba(39,174,96,.08)}
-  select.gei-NS{border-color:#2980B9;color:#2980B9;background:rgba(41,128,185,.08)}
+/* NOTA BADGE */
+.nota-badge{display:inline-block;min-width:36px;text-align:center;border-radius:4px;padding:2px 6px;font-weight:700;font-size:12px}
+.nota-alta{background:#E8F5E9;color:#2E7D32}
+.nota-media{background:#FFF3E0;color:#E65100}
+.nota-baja{background:#FFEBEE;color:#C62828}
+.nota-excelente{background:#E3F2FD;color:#1565C0}
 
-  /* SELECT normal */
-  select.sel{border:1px solid #DDE3EC;border-radius:8px;padding:5px 10px;font-size:12px;background:#fff;color:#1C2B3A}
+/* PERIOD TABS */
+.per-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.per-tab{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:20px;background:#fff;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2)}
+.per-tab:hover{background:#f5f5f5}
+.per-tab.active{border-color:var(--blue);background:#E3F2FD;color:var(--blue);font-weight:700}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-1{background:var(--green)}.dot-2{background:var(--orange)}.dot-3{background:var(--red)}.dot-4{background:var(--blue)}.dot-5{background:var(--purple)}
 
-  /* CHAT */
-  .chat-box{display:flex;flex-direction:column;height:calc(100vh - 160px);background:#F5F7FA;border-radius:12px;overflow:hidden;border:1px solid #DDE3EC}
-  .chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
-  .msg-user{align-self:flex-end;max-width:82%}
-  .msg-bot{align-self:flex-start;max-width:82%}
-  .msg-label{font-size:10px;color:#6B7C93;margin-bottom:2px;font-weight:600}
-  .bubble-user{background:#2E6DA4;color:#fff;border-radius:14px 14px 4px 14px;padding:10px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
-  .bubble-bot{background:#fff;color:#1C2B3A;border:1px solid #DDE3EC;border-radius:4px 14px 14px 14px;padding:10px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
-  .chat-sugs{padding:7px 14px;border-top:1px solid #DDE3EC;display:flex;flex-wrap:wrap;gap:5px}
-  .sug{background:rgba(26,58,92,.08);color:#1A3A5C;border:1px solid rgba(26,58,92,.2);border-radius:20px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:500}
-  .chat-input{padding:10px 12px;border-top:1px solid #DDE3EC;display:flex;gap:8px}
-  .chat-input input{flex:1;border:1px solid #DDE3EC;border-radius:8px;padding:9px 12px;font-size:13px;outline:none}
+/* TIPO EVAL BADGES */
+.tipo-proceso{background:#E3F2FD;color:#1565C0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600}
+.tipo-ap{background:#F3E5F5;color:#6A1B9A;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600}
+.tipo-cierre{background:#FFF3E0;color:#E65100;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600}
 
-  /* ALUMNOS */
-  .alumno-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid #DDE3EC;flex-wrap:wrap}
-  .alumno-nombre{flex:1;min-width:130px}
-  .alumno-nombre strong{display:block;font-size:13px}
-  .alumno-nombre span{font-size:11px;color:#6B7C93}
+/* EVAL LIST */
+.eval-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+.eval-item:hover{background:#f8fbff}
+.eval-item:last-child{border-bottom:none}
+.eval-date{font-size:11px;color:var(--text3);min-width:70px}
+.eval-tipo{min-width:80px}
+.eval-desc{flex:1;font-weight:500}
+.eval-stats{display:flex;gap:12px;font-size:11px;color:var(--text2)}
+.eval-stats strong{color:var(--text)}
 
-  /* APS */
-  .area-list{display:flex;flex-direction:column;gap:2px}
-  .area-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;cursor:pointer}
-  .area-item:hover{background:#F5F7FA}
-  .area-item.active{background:rgba(26,58,92,.12)}
-  .area-item span{font-size:12px}
-  .area-badge{font-size:10px;color:#6B7C93;background:#F5F7FA;padding:1px 5px;border-radius:4px}
-  .ap-item{display:flex;justify-content:space-between;align-items:center;background:#F5F7FA;border-radius:8px;padding:7px 11px;margin-bottom:6px}
-  .ap-item span{font-size:12px}
-  .btn-x{background:none;border:none;cursor:pointer;color:#C0392B;font-size:16px;line-height:1;padding:0 4px}
+/* STUDENT PROFILE */
+.profile-header{display:flex;align-items:center;gap:16px;padding:16px;background:#f8f9fa;border-bottom:1px solid var(--border)}
+.profile-avatar{width:50px;height:50px;border-radius:50%;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+.profile-name{font-size:18px;font-weight:700}
+.profile-sub{font-size:12px;color:var(--text2)}
 
-  /* LEYENDA */
-  .leyenda{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-card .stat-val{font-size:24px;font-weight:800}
+.stat-card .stat-label{font-size:11px;color:var(--text3);margin-top:2px}
 
-  /* NOTA */
-  .nota-normativa{background:#FFF8E1;border:1px solid #F39C12;border-radius:10px;padding:11px;font-size:12px;color:#7D4E00;margin-top:10px}
+/* PROGRESS BAR */
+.progress{height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-top:4px}
+.progress-bar{height:100%;border-radius:4px;transition:width .3s}
 
-  /* LLAMADOS */
-  .llamados-ctrl{display:flex;align-items:center;gap:4px}
-  .btn-pm{background:none;border:none;cursor:pointer;font-size:15px;padding:0 2px}
+/* MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;display:flex;justify-content:center;align-items:flex-start;padding:30px;overflow:auto}
+.modal{background:#fff;border-radius:12px;max-width:950px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.modal-head{background:var(--pri);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1}
+.modal-head h3{font-size:15px}
+.modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer}
+.modal-body{padding:20px}
 
-  input.inp{border:1px solid #DDE3EC;border-radius:8px;padding:7px 11px;font-size:13px}
-  input.inp-sm{border:1px solid #DDE3EC;border-radius:8px;padding:5px 8px;font-size:12px}
+/* CHAT */
+.chat-box{display:flex;flex-direction:column;height:calc(100vh - 120px);background:#fff;border:1px solid var(--border);border-radius:var(--radius)}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg-user{align-self:flex-end;max-width:80%}
+.msg-bot{align-self:flex-start;max-width:80%}
+.msg-label{font-size:10px;color:var(--text3);margin-bottom:2px;font-weight:600}
+.bubble-user{background:var(--blue);color:#fff;border-radius:14px 14px 4px 14px;padding:10px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.bubble-bot{background:#f5f7fa;color:var(--text);border-radius:4px 14px 14px 14px;padding:10px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.chat-input-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px}
+.chat-input-row input{flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;outline:none}
+.chat-sugs{padding:6px 10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px}
+.sug{background:#f0f4ff;color:var(--blue);border:1px solid #d0dcf0;border-radius:16px;padding:3px 10px;font-size:11px;cursor:pointer}
 
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .ml-auto{margin-left:auto}
-  .hidden{display:none}
-  .empty{padding:20px;text-align:center;color:#6B7C93;font-size:13px}
+/* EMPTY */
+.empty{padding:30px;text-align:center;color:var(--text3)}
+.empty-icon{font-size:36px;margin-bottom:8px}
 
-  @media(max-width:600px){
-    .content{padding:10px 10px}
-    .card{padding:10px}
-  }
+/* ROW */
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* IMPORT */
+.import-zone{border:2px dashed var(--blue);background:rgba(25,118,210,.03);border-radius:10px;padding:16px}
+
+/* NOTA INPUT */
+input.nota-inp{width:52px;text-align:center;border:1px solid var(--border);border-radius:4px;padding:4px;font-size:12px;font-weight:600}
+input.nota-inp:focus{outline:2px solid var(--blue)}
+
+/* INFORME */
+.informe-area{border-left:3px solid var(--blue);padding:8px 14px;margin-bottom:10px;background:#fafcff;border-radius:0 8px 8px 0}
+.informe-area h4{font-size:13px;color:var(--pri);margin-bottom:4px}
+.informe-detalle{font-size:12px;color:var(--text2);line-height:1.6}
+
+@media(max-width:700px){
+  .page{padding:10px}
+  .card-body{padding:12px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
-  <div>
-    <h1>📚 Asistente Docente IA</h1>
-    <p>Sistema GEI · Mendoza · Primario 1° a 7° · 💾 Guardado automático</p>
+  <div class="logo"><div class="logo-bars"><span></span><span></span><span></span></div>GEI</div>
+  <span class="school-label">P276 · FASTA JUAN PABLO II</span>
+  <div class="header-right">
+    <span id="headerStats">💾 Guardado automático</span>
   </div>
-  <div class="header-stats" id="headerStats">0 alumnos</div>
 </div>
 
-<!-- TABS -->
-<div class="tabs">
-  <button class="tab active" onclick="showTab('chat')">🤖 Asistente IA</button>
-  <button class="tab" onclick="showTab('planilla')">📋 Calificaciones</button>
-  <button class="tab" onclick="showTab('cierre')">📊 Cierre</button>
-  <button class="tab" onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
-  <button class="tab" onclick="showTab('aps')">⚙️ Aprendizajes</button>
+<div class="nav" id="mainNav">
+  <button class="active" onclick="showTab('cursadas')">📚 Mis Cursadas</button>
+  <button onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
+  <button onclick="showTab('docentes')">👩‍🏫 Docentes</button>
+  <button onclick="showTab('informes')">📊 Informes</button>
+  <button onclick="showTab('chat')">🤖 Asistente IA</button>
+  <button onclick="showTab('config')">⚙️ Configuración</button>
 </div>
 
-<div class="content">
+<div class="page">
 
-  <!-- ── TAB CHAT ── -->
-  <div id="tab-chat">
-    <div class="chat-box">
-      <div class="chat-msgs" id="chatMsgs">
-        <div class="msg-bot">
-          <div class="msg-label">🤖 Asistente GEI</div>
-          <div class="bubble-bot">¡Hola, Profesora! Soy tu asistente docente GEI.
+<!-- ═══ TAB: CURSADAS ═══ -->
+<div id="tab-cursadas">
+  <!-- Filtros globales -->
+  <div class="card">
+    <div class="card-body" style="padding:12px 18px">
+      <div class="row">
+        <label style="font-weight:600;font-size:12px;color:var(--pri)">Grado:</label>
+        <select class="sel" id="gGrado" onchange="onGradoChange()">
+          <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option selected>7°</option>
+        </select>
+        <div class="per-tabs" id="perTabs" style="margin-left:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de materias/cursadas -->
+  <div class="card">
+    <div class="card-head">
+      <h2 id="cursadasTitle">📚 Cursadas · Primer Período 2026</h2>
+      <div class="row">
+        <button class="btn btn-green" onclick="abrirNuevaEval()">+ Nueva evaluación y cargar notas</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0" id="cursadasList"></div>
+  </div>
+
+  <!-- Convivencia -->
+  <div class="card">
+    <div class="card-head">
+      <h2>🤝 Convivencia · <span id="convPerLabel">Primer Período</span></h2>
+      <button class="btn btn-orange btn-sm" onclick="abrirNuevoEventoConv()">+ Registrar evento</button>
+    </div>
+    <div class="card-body">
+      <div id="convResumen" style="margin-bottom:12px"></div>
+      <div id="convEventos"></div>
+    </div>
+  </div>
+
+  <!-- Detalle de materia seleccionada -->
+  <div class="card" id="materiaDetalle" style="display:none">
+    <div class="card-head">
+      <h2 id="materiaDetalleTitle">Evaluaciones</h2>
+      <div class="row">
+        <button class="btn btn-green btn-sm" onclick="abrirNuevaEval()">+ Nueva evaluación y cargar notas</button>
+        <button class="btn btn-outline btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0" id="evalList"></div>
+  </div>
+</div>
+
+<!-- ═══ TAB: ALUMNOS ═══ -->
+<div id="tab-alumnos" class="hidden">
+
+  <!-- PASO 1: Elegir grado -->
+  <div class="card">
+    <div class="card-head">
+      <h2>👨‍🎓 Listado de Alumnos por Grado</h2>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <label style="font-weight:600;font-size:13px;color:var(--pri);align-self:center;margin-right:8px">Seleccioná el grado:</label>
+        <button class="per-tab dot-1 active" onclick="selGradoAlumnos('1°',this)"><span class="dot dot-1"></span>1° Grado</button>
+        <button class="per-tab" onclick="selGradoAlumnos('2°',this)"><span class="dot dot-2"></span>2° Grado</button>
+        <button class="per-tab" onclick="selGradoAlumnos('3°',this)"><span class="dot dot-3"></span>3° Grado</button>
+        <button class="per-tab" onclick="selGradoAlumnos('4°',this)"><span class="dot dot-4"></span>4° Grado</button>
+        <button class="per-tab" onclick="selGradoAlumnos('5°',this)"><span class="dot dot-5"></span>5° Grado</button>
+        <button class="per-tab" onclick="selGradoAlumnos('6°',this)"><span class="dot dot-1"></span>6° Grado</button>
+        <button class="per-tab active" onclick="selGradoAlumnos('7°',this)"><span class="dot dot-2"></span>7° Grado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 2: Cargar alumnos -->
+  <div class="card">
+    <div class="card-head">
+      <h2 id="alTituloCarga">📂 Cargar alumnos de 7° Grado</h2>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <!-- Opción A: Excel -->
+        <div class="import-zone">
+          <div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:14px">📂 Cargar desde Excel</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:6px">Subí un Excel con <strong>una sola columna</strong> que contenga los nombres de los alumnos (Apellido, Nombre). El grado se asigna automáticamente al que tenés seleccionado arriba.</p>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:10px">También podés subir la <strong>planilla oficial de la DGE</strong> ("Planilla general de notas") y se importan alumnos + notas.</p>
+          <div class="row">
+            <label class="btn btn-pri" style="cursor:pointer">
+              📂 Elegir archivo .xlsx / .xls
+              <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
+            </label>
+          </div>
+          <div style="margin-top:8px">
+            <button class="btn btn-outline btn-sm" onclick="descargarPlantillaAlumnos()">⬇️ Descargar plantilla de ejemplo</button>
+          </div>
+          <div id="importMsg" style="margin-top:8px;font-size:12px;display:none;padding:8px;border-radius:6px;font-weight:600"></div>
+        </div>
+
+        <!-- Opción B: Manual -->
+        <div style="border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:14px">✏️ Agregar manualmente</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Escribí el nombre del alumno y presioná Enter o el botón Agregar. Se asigna al grado seleccionado arriba.</p>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <input class="inp" id="nuevoNombre" placeholder="Apellido, Nombre (ej: García, Lucía)" style="width:100%" onkeydown="if(event.key==='Enter')agregarAlumno()">
+            <button class="btn btn-green" onclick="agregarAlumno()" style="align-self:flex-start">+ Agregar alumno</button>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--text3)">💡 Podés agregar varios de seguido: escribí, Enter, escribí, Enter...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 3: Listado actual -->
+  <div class="card">
+    <div class="card-head">
+      <h2 id="alTituloListado">👨‍🎓 Alumnos de 7° Grado <span id="alConteo" style="font-weight:400;font-size:13px;color:var(--text2)"></span></h2>
+      <div class="row">
+        <span style="font-size:12px;color:var(--text2);margin-right:6px">Docente a cargo:</span>
+        <select class="sel" id="docenteACargo" onchange="guardarDocenteACargo()" style="min-width:180px">
+          <option value="">— Sin asignar —</option>
+        </select>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0" id="alumnosLista"></div>
+  </div>
+</div>
+
+<!-- ═══ TAB: DOCENTES ═══ -->
+<div id="tab-docentes" class="hidden">
+  <div class="card">
+    <div class="card-head">
+      <h2>👩‍🏫 Plantel Docente</h2>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Excel docentes -->
+        <div class="import-zone">
+          <div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:14px">📂 Cargar docentes desde Excel</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Subí un Excel con columnas: <strong>Nombre</strong> (obligatorio), <strong>Materia</strong> (opcional), <strong>Grado</strong> (opcional). Si no tienen materia/grado, se los asignás después.</p>
+          <div class="row">
+            <label class="btn btn-pri" style="cursor:pointer">📂 Elegir archivo<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importarDocentes(this)"></label>
+            <button class="btn btn-outline btn-sm" onclick="descargarPlantillaDocentes()">⬇️ Plantilla</button>
+          </div>
+          <div id="importMsgDoc" style="margin-top:8px;font-size:12px;display:none;padding:8px;border-radius:6px;font-weight:600"></div>
+        </div>
+
+        <!-- Manual docentes -->
+        <div style="border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:14px">✏️ Agregar manualmente</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input class="inp" id="nuevoDocNombre" placeholder="Nombre completo del docente" style="width:100%">
+            <select class="sel" id="nuevoDocMateria" style="width:100%">
+              <option value="">— Materia (opcional) —</option>
+            </select>
+            <select class="sel" id="nuevoDocGrado" style="width:100%">
+              <option value="">— Grado (opcional) —</option>
+              <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
+            </select>
+            <button class="btn btn-green" onclick="agregarDocente()" style="align-self:flex-start">+ Agregar docente</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de docentes -->
+  <div class="card">
+    <div class="card-head"><h2>📋 Docentes registrados</h2></div>
+    <div class="card-body" style="padding:0" id="docentesLista"></div>
+  </div>
+</div>
+
+<!-- ═══ TAB: INFORMES ═══ -->
+<div id="tab-informes" class="hidden">
+  <div class="card">
+    <div class="card-head">
+      <h2>📊 Informes de rendimiento</h2>
+      <div class="row">
+        <select class="sel" id="infGrado" onchange="renderInformeAlumnoList()">
+          <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option selected>7°</option>
+        </select>
+        <select class="sel" id="infAlumno" onchange="renderInforme()">
+          <option value="">— Seleccioná un alumno —</option>
+        </select>
+        <button class="btn btn-pri btn-sm" onclick="imprimirInforme()">🖨️ Imprimir</button>
+        <button class="btn btn-green btn-sm" onclick="exportarInformeExcel()">📥 Excel</button>
+      </div>
+    </div>
+    <div class="card-body" id="informeContent">
+      <div class="empty"><div class="empty-icon">📊</div>Seleccioná un grado y un alumno para ver su informe personalizado.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: CHAT ═══ -->
+<div id="tab-chat" class="hidden">
+  <div class="chat-box">
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="msg-bot"><div class="msg-label">🤖 Asistente</div>
+      <div class="bubble-bot">¡Hola! Soy tu asistente docente para el sistema GEI.
 
 Puedo ayudarte a:
-• Cargar calificaciones («SA a Lucía en Matemática período 1»)
+• Cargar notas: «8.5 a Lucía en Matemática, Primer Período»
 • Registrar llamados de atención
-• Consultar promedios por alumno o grado
-• Responder dudas sobre la normativa GEI Mendoza
+• Consultar promedios y rendimiento
+• Responder dudas sobre la normativa DGE
 
-¿Qué necesitás hoy?</div>
-        </div>
+¿Qué necesitás?</div></div>
+    </div>
+    <div class="chat-sugs">
+      <button class="sug" onclick="setSug('8.5 a Lucía en Matemática')">Cargar nota</button>
+      <button class="sug" onclick="setSug('¿Cómo va Lucía en general?')">Rendimiento alumno</button>
+      <button class="sug" onclick="setSug('Llamado a Mateo por conducta')">Llamado de atención</button>
+    </div>
+    <div class="chat-input-row">
+      <input id="chatInput" placeholder="Escribí tu consulta..." onkeydown="if(event.key==='Enter')enviarChat()">
+      <button class="btn btn-pri" onclick="enviarChat()" id="btnEnviar">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: CONFIG ═══ -->
+<div id="tab-config" class="hidden">
+  <div class="card">
+    <div class="card-head"><h2>⚙️ Materias y Aprendizajes Prioritarios</h2>
+      <button class="btn btn-pri btn-sm" id="btnGuardarAPs" onclick="guardarAPs()">💾 Guardar cambios</button>
+    </div>
+    <div class="card-body">
+      <div class="row" style="margin-bottom:12px">
+        <input class="inp" id="nuevaArea" placeholder="Nueva materia..." style="flex:1" onkeydown="if(event.key==='Enter')agregarArea()">
+        <button class="btn btn-green btn-sm" onclick="agregarArea()">+ Agregar</button>
       </div>
-      <div class="chat-sugs">
-        <button class="sug" onclick="setSug('SA a Lucía en Matemática período 1')">SA a Lucía en Matemática período 1</button>
-        <button class="sug" onclick="setSug('Llamado a Mateo por conducta')">Llamado a Mateo por conducta</button>
-        <button class="sug" onclick="setSug('¿Cómo va el grado 3°?')">¿Cómo va el grado 3°?</button>
-        <button class="sug" onclick="setSug('¿Qué es la escala GEI?')">¿Qué es la escala GEI?</button>
-      </div>
-      <div class="chat-input">
-        <input id="chatInput" type="text" placeholder="Escribí una instrucción al asistente..." onkeydown="if(event.key==='Enter')enviarChat()">
-        <button class="btn btn-azul" onclick="enviarChat()" id="btnEnviar">Enviar</button>
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:12px" id="apsGrid">
+        <div id="areaListWrap" style="border:1px solid var(--border);border-radius:8px;padding:8px"></div>
+        <div id="apPanel" style="border:1px solid var(--border);border-radius:8px;padding:14px"></div>
       </div>
     </div>
   </div>
-
-  <!-- ── TAB PLANILLA ── -->
-  <div id="tab-planilla" class="hidden">
-    <div class="card">
-      <div class="filtros">
-        <label>VER POR:</label>
-        <button class="btn-toggle active" id="btnGrado" onclick="setModoP('grado')">Grado</button>
-        <button class="btn-toggle" id="btnAlumno" onclick="setModoP('alumno')">Alumno</button>
-        <select class="sel" id="pGrado" onchange="renderPlanilla()">
-          <option>1°</option><option>2°</option><option selected>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
-        </select>
-        <select class="sel hidden" id="pAlumnoSel" onchange="renderPlanilla()"></select>
-        <select class="sel" id="pArea" onchange="renderPlanilla()"></select>
-        <select class="sel" id="pPeriodo" onchange="renderPlanilla()">
-          <option>1° Período</option><option>2° Período</option><option>3° Período</option><option>Cierre Anual</option>
-        </select>
-        <div class="ml-auto row">
-          <button class="btn btn-verde btn-sm" onclick="exportExcel()">📥 Excel</button>
-          <button class="btn btn-rojo btn-sm" onclick="exportPDF()">🖨️ PDF</button>
-        </div>
-      </div>
-    </div>
-    <div id="planillaWrap"></div>
-    <div class="leyenda" id="leyendaP"></div>
-  </div>
-
-  <!-- ── TAB CIERRE ── -->
-  <div id="tab-cierre" class="hidden">
-    <div class="card">
-      <div class="filtros">
-        <span style="font-weight:700;color:#1A3A5C;font-size:13px">📊 CIERRE DE PERÍODO</span>
-        <select class="sel" id="cGrado" onchange="renderCierre()">
-          <option>1°</option><option>2°</option><option selected>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
-        </select>
-        <select class="sel" id="cPeriodo" onchange="renderCierre()">
-          <option>1° Período</option><option>2° Período</option><option>3° Período</option><option>Cierre Anual</option>
-        </select>
-        <div class="ml-auto row">
-          <button class="btn btn-verde btn-sm" onclick="exportExcelCierre()">📥 Excel</button>
-          <button class="btn btn-rojo btn-sm" onclick="exportPDFCierre()">🖨️ PDF</button>
-        </div>
-      </div>
-    </div>
-    <div id="cierreWrap"></div>
-    <div class="nota-normativa">
-      <strong>📌 Normativa GEI Mendoza:</strong> Escala cualitativa EP·EA·SA·NS. Cierre anual: promedio igual de los 3 períodos. Convivencia calculada según llamados de atención registrados (0→SA · 1→EA · 2+→EP).
+  <div class="card">
+    <div class="card-head"><h2>🗑️ Datos</h2></div>
+    <div class="card-body">
+      <button class="btn btn-red btn-sm" onclick="if(confirm('¿Borrar TODOS los datos? No se puede deshacer.')){localStorage.clear();location.reload();}">Borrar todos los datos y empezar de cero</button>
     </div>
   </div>
+</div>
 
-  <!-- ── TAB ALUMNOS ── -->
-  <div id="tab-alumnos" class="hidden">
-
-    <!-- IMPORTAR EXCEL -->
-    <div class="card" style="border:2px dashed #2E6DA4;background:rgba(46,109,164,.04)">
-      <div class="card-title" style="color:#2E6DA4">📂 Importar desde Excel</div>
-      <p style="font-size:12px;color:#6B7C93;margin-bottom:10px">
-        El archivo Excel debe tener una hoja con columnas: <strong>Nombre</strong> y <strong>Grado</strong>
-        (ej: "García, Lucía" — "3°"). También puede tener columnas de calificaciones con el formato
-        <strong>Area__Periodo__AP</strong> (ej: "Matemática__1° Período__Geometría").
-      </p>
-      <div class="row">
-        <label class="btn btn-azul" style="cursor:pointer;display:inline-block">
-          📂 Elegir archivo .xlsx
-          <input type="file" id="inputExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
-        </label>
-        <button class="btn btn-verde btn-sm" onclick="descargarPlantilla()">⬇️ Descargar plantilla</button>
-      </div>
-      <div id="importMsg" style="margin-top:10px;font-size:12px;display:none"></div>
-    </div>
-
-    <!-- AGREGAR MANUAL -->
-    <div class="card">
-      <div class="card-title">➕ Agregar Alumno/a manualmente</div>
-      <div class="row">
-        <input class="inp" id="nuevoNombre" placeholder="Apellido, Nombre" style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')agregarAlumno()">
-        <select class="sel" id="nuevoGrado">
-          <option>1°</option><option>2°</option><option selected>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
-        </select>
-        <button class="btn btn-verde" onclick="agregarAlumno()">Agregar</button>
-      </div>
-    </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #DDE3EC;overflow:hidden">
-      <div style="background:#1A3A5C;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:700;font-size:13px" id="alumnosTitle">👨‍🎓 Alumnos</span>
-        <select class="sel" id="filtroGrado" onchange="renderAlumnos()" style="font-size:12px;border:none">
-          <option value="Todos">Todos los grados</option>
-          <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
-        </select>
-      </div>
-      <div id="alumnosLista"></div>
-    </div>
-  </div>
-
-  <!-- ── TAB APS ── -->
-  <div id="tab-aps" class="hidden">
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <div>
-        <div style="font-weight:700;color:#1A3A5C;font-size:13px">⚙️ Aprendizajes Prioritarios por Área</div>
-        <div style="font-size:11px;color:#6B7C93;margin-top:2px">Personalizá las áreas y los APs según tu planificación</div>
-      </div>
-      <button class="btn btn-azul" id="btnGuardarAPs" onclick="guardarAPs()">💾 Guardar</button>
-    </div>
-    <div class="card">
-      <div style="font-weight:600;color:#1A3A5C;font-size:12px;margin-bottom:8px">➕ Nueva área curricular</div>
-      <div class="row">
-        <input class="inp" id="nuevaArea" placeholder="Nombre del área" style="flex:1" onkeydown="if(event.key==='Enter')agregarArea()">
-        <button class="btn btn-verde btn-sm" onclick="agregarArea()">Agregar área</button>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:180px 1fr;gap:12px">
-      <div class="card" style="padding:8px">
-        <div style="font-size:11px;font-weight:700;color:#6B7C93;padding:4px 8px;margin-bottom:4px">ÁREAS</div>
-        <div class="area-list" id="areaList"></div>
-      </div>
-      <div class="card" id="apPanel">
-        <div style="color:#6B7C93;font-size:13px">Seleccioná un área de la lista</div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /content -->
+</div><!-- /page -->
 
 <script>
-// ─── ESTADO ───────────────────────────────────────────────────────────────────
-const GEI = {
-  EP:{label:"En Proceso",valor:1,color:"#E74C3C"},
-  EA:{label:"En Avance",valor:2,color:"#E67E22"},
-  SA:{label:"Satisfactorio",valor:3,color:"#27AE60"},
-  NS:{label:"Notable Superación",valor:4,color:"#2980B9"}
-};
-const PERIODOS=["1° Período","2° Período","3° Período","Cierre Anual"];
+// ════════════════════════════════════════════════════════════════════════════
+// ESTADO
+// ════════════════════════════════════════════════════════════════════════════
+const PERIODOS=["Primer Período","Segundo Período","Calificación Final","Intensificación","Acreditación"];
 const GRADOS=["1°","2°","3°","4°","5°","6°","7°"];
-
-const APS_DEFAULT={
-  "Matemática":["Números y operaciones","Geometría","Medida","Estadística"],
-  "Lengua":["Lectura y comprensión","Escritura","Gramática","Oralidad"],
-  "Cs. Naturales":["Seres vivos","Materia y energía","La Tierra"],
-  "Cs. Sociales":["Sociedades y territorios","Historia","Geografía"],
-  "Ed. Física":["Habilidades motrices","Juego","Vida saludable"],
-  "Ed. Artística":["Expresión plástica","Música","Teatro"],
-  "Inglés":["Comprensión oral","Expresión escrita","Vocabulario"],
-  "Tecnología":["Pensamiento computacional","Diseño tecnológico"],
-  "Convivencia":["Respeto","Participación","Responsabilidad","Solidaridad"]
-};
-
-const ALUMNOS_EJ=[
-  {id:1,nombre:"García, Lucía",grado:"3°"},
-  {id:2,nombre:"Pérez, Mateo",grado:"3°"},
-  {id:3,nombre:"López, Valentina",grado:"3°"},
-  {id:4,nombre:"Rodríguez, Tomás",grado:"4°"},
-  {id:5,nombre:"Martínez, Sofía",grado:"4°"}
+const TIPOS_EVAL=[
+  {id:"proceso",label:"Evaluación de proceso",css:"tipo-proceso",subtypes:["Escrito","Oral","TP","Carpeta","Concepto","Lección oral","Exposición"]},
+  {id:"ap",label:"Evaluación de AP prioritario",css:"tipo-ap",subtypes:["Evaluación AP"]},
+  {id:"cierre",label:"Cierre de período",css:"tipo-cierre",subtypes:["Cierre de período","Integrador"]}
 ];
+const MATERIAS_DEFAULT=["Catequesis","Ciencias Naturales","Ciencias Sociales",
+  "Educación Artística: Artes Visuales","Educación Artística: Música",
+  "Educación Física","Formación Ética y Ciudadana","Lengua",
+  "Lengua Extranjera - Inglés","Matemática"];
+const APS_DEFAULT={};
+MATERIAS_DEFAULT.forEach(m=>APS_DEFAULT[m]=[]);
+APS_DEFAULT["Convivencia"]=["Respeto","Participación","Responsabilidad","Solidaridad"];
 
-function lsLoad(k,d){try{const v=localStorage.getItem("gdoc_"+k);return v?JSON.parse(v):d;}catch{return d;}}
-function lsSave(k,v){try{localStorage.setItem("gdoc_"+k,JSON.stringify(v));}catch{}}
+function ls(k,d){try{const v=localStorage.getItem("gei_"+k);return v?JSON.parse(v):d;}catch{return d;}}
+function sv(k,v){try{localStorage.setItem("gei_"+k,JSON.stringify(v));}catch{}}
 
-let alumnos   = lsLoad("alumnos",   ALUMNOS_EJ);
-let calif     = lsLoad("calif",     {});
-let llamados  = lsLoad("llamados",  {});
-let aps       = lsLoad("aps",       APS_DEFAULT);
-let apsLocal  = JSON.parse(JSON.stringify(aps)); // copia editable
+let alumnos    = ls("alumnos",[]);
+let evaluaciones = ls("evaluaciones",[]); // [{id,materia,grado,periodo,tipo,subtipo,descripcion,fecha,ap,notas:{alId:nota},ausentes:[alId]}]
+let llamados   = ls("llamados",{});
+let convEventos = ls("convEventos",[]); // [{id,alumnoId,grado,periodo,fecha,categoria,tipo,descripcion}]
+let docentes   = ls("docentes",[]);    // [{id,nombre,asignaciones:[{materia,grado}]}]
+let docenteACargo = ls("docenteACargo",{}); // {grado: docenteId}
+let nextDocId  = ls("nextDocId",1);
+let aps        = ls("aps",APS_DEFAULT);
+let apsLocal   = JSON.parse(JSON.stringify(aps));
 let areaEdActual = Object.keys(aps)[0];
-let nextId    = Math.max(...alumnos.map(a=>a.id),0)+1;
-let modoP     = "grado"; // planilla: grado | alumno
-let tabActual = "chat";
+let nextId     = ls("nextId",1);
+let nextEvalId = ls("nextEvalId",1);
+let nextConvId = ls("nextConvId",1);
+let gradoActual = ls("gradoActual","7°");
+let periodoActual = ls("periodoActual",PERIODOS[0]);
+let materiaActual = null;
+let tabActual  = "cursadas";
 let chatLoading = false;
+let gradoAlumnos = "7°";
 
 function guardarTodo(){
-  lsSave("alumnos",alumnos);
-  lsSave("calif",calif);
-  lsSave("llamados",llamados);
-  lsSave("aps",aps);
-  updateHeaderStats();
+  sv("alumnos",alumnos);sv("evaluaciones",evaluaciones);sv("llamados",llamados);
+  sv("convEventos",convEventos);sv("aps",aps);sv("nextId",nextId);
+  sv("docentes",docentes);sv("docenteACargo",docenteACargo);sv("nextDocId",nextDocId);
+  sv("nextEvalId",nextEvalId);sv("nextConvId",nextConvId);
+  sv("gradoActual",gradoActual);sv("periodoActual",periodoActual);
+  const nEv=evaluaciones.length;const nAl=alumnos.length;const nConv=convEventos.length;
+  document.getElementById("headerStats").textContent=`${nAl} alumnos · ${nEv} evaluaciones · ${nConv} eventos conv. · 💾`;
 }
 
-function updateHeaderStats(){
-  const nCal=Object.values(calif).filter(Boolean).length;
-  document.getElementById("headerStats").innerHTML=`${alumnos.length} alumnos · ${nCal} notas`;
-}
+function round2(n){return Math.round(n*100)/100;}
+function formatN(n){if(n===null||n===undefined||n==="")return"—";let s=round2(parseFloat(n)).toFixed(2).replace(/0+$/,"").replace(/\.$/,"");return s;}
+function notaCls(n){if(n===null||n===undefined||n==="")return"";const v=parseFloat(n);if(isNaN(v))return"";if(v>=9)return"nota-excelente";if(v>=7)return"nota-alta";if(v>=4)return"nota-media";return"nota-baja";}
+function notaColor(n){const v=parseFloat(n);if(isNaN(v))return"var(--text3)";if(v>=9)return"var(--blue)";if(v>=7)return"var(--green)";if(v>=4)return"var(--orange)";return"var(--red)";}
+function escH(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
-// ─── HELPERS GEI ─────────────────────────────────────────────────────────────
-function promedioGEI(arr){
-  const vals=arr.filter(c=>GEI[c]).map(c=>GEI[c].valor);
+// ════════════════════════════════════════════════════════════════════════════
+// CÁLCULOS
+// ════════════════════════════════════════════════════════════════════════════
+function evalsDeMateria(materia,grado,periodo){
+  return evaluaciones.filter(e=>e.materia===materia&&e.grado===grado&&e.periodo===periodo);
+}
+function promedioAlumnoMatPer(alId,materia,grado,periodo){
+  const evs=evalsDeMateria(materia,grado,periodo);
+  const vals=evs.map(e=>e.notas[alId]).filter(v=>v!==undefined&&v!==""&&v!==null).map(Number).filter(n=>!isNaN(n));
   if(!vals.length)return null;
-  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
-  if(avg>=3.5)return"NS"; if(avg>=2.5)return"SA"; if(avg>=1.5)return"EA"; return"EP";
+  return round2(vals.reduce((a,b)=>a+b,0)/vals.length);
 }
-function convivencia(n){return n===0?"SA":n===1?"EA":"EP";}
-function badge(cod){
-  if(!GEI[cod])return"—";
-  return`<span class="badge badge-${cod}">${cod} · ${GEI[cod].label}</span>`;
+function promedioAlumnoMatAnual(alId,materia,grado){
+  const vals=["Primer Período","Segundo Período","Calificación Final"].map(p=>promedioAlumnoMatPer(alId,materia,grado,p)).filter(v=>v!==null);
+  if(!vals.length)return null;
+  return round2(vals.reduce((a,b)=>a+b,0)/vals.length);
 }
-function badgeSolo(cod){
-  if(!GEI[cod])return"<span style='color:#DDE3EC'>—</span>";
-  const g=GEI[cod];
-  return`<span style="background:${g.color}20;color:${g.color};border-radius:5px;padding:2px 5px;font-weight:700;font-size:11px;border:1px solid ${g.color}44">${cod}</span>`;
+function promedioGeneralAlumno(alId,grado,periodo){
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const vals=mats.map(m=>promedioAlumnoMatPer(alId,m,grado,periodo)).filter(v=>v!==null);
+  if(!vals.length)return null;
+  return round2(vals.reduce((a,b)=>a+b,0)/vals.length);
 }
-function getN(id,area,periodo,ap){return calif[`${id}__${area}__${periodo}__${ap}`]||"";}
-function promArea(id,area,periodo){
-  if(!aps[area])return null;
-  const ns=aps[area].map(ap=>getN(id,area,periodo,ap)).filter(Boolean);
-  return promedioGEI(ns);
+function convivencia(n){return n===0?10:n===1?7:4;}
+
+// Convivencia calculada desde eventos registrados
+const CONV_CATEGORIAS=["Respeto","Participación","Responsabilidad","Solidaridad"];
+const CONV_TIPOS=[
+  {id:"positivo",label:"Positivo",emoji:"✅",color:"var(--green)"},
+  {id:"negativo",label:"Negativo / Llamado",emoji:"⚠️",color:"var(--red)"},
+  {id:"observacion",label:"Observación",emoji:"📝",color:"var(--orange)"}
+];
+function convEventosAlumno(alId,grado,periodo){
+  return convEventos.filter(e=>e.alumnoId===alId&&e.grado===grado&&e.periodo===periodo);
 }
-function promAnual(id,area){
-  const ns=["1° Período","2° Período","3° Período"].map(p=>promArea(id,area,p)).filter(Boolean);
-  return promedioGEI(ns);
+function notaConvivencia(alId,grado,periodo){
+  const evs=convEventosAlumno(alId,grado,periodo);
+  if(!evs.length){
+    // fallback a los llamados manuales viejos
+    const ll=llamados[alId]||0;
+    return ll===0?10:ll===1?7:4;
+  }
+  const negativos=evs.filter(e=>e.tipo==='negativo').length;
+  const positivos=evs.filter(e=>e.tipo==='positivo').length;
+  // Base 10, -1.5 por cada negativo, +0.5 por cada positivo, mín 1, máx 10
+  let nota=10 - (negativos*1.5) + (positivos*0.5);
+  return round2(Math.max(1,Math.min(10,nota)));
+}
+function convCalificacion(nota){
+  if(nota>=9)return{label:"MB",cls:"badge-blue"};
+  if(nota>=7)return{label:"B",cls:"badge-green"};
+  if(nota>=4)return{label:"R",cls:"badge-orange"};
+  return{label:"I",cls:"badge-red"};
 }
 
-// ─── TABS ─────────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════════════════════════════════════
 function showTab(t){
   tabActual=t;
-  document.querySelectorAll(".tab").forEach(el=>el.classList.remove("active"));
-  document.querySelectorAll("[id^='tab-']").forEach(el=>el.classList.add("hidden"));
-  event.target.classList.add("active");
-  document.getElementById("tab-"+t).classList.remove("hidden");
-  if(t==="planilla"){initSelectArea();renderPlanilla();}
-  if(t==="cierre"){renderCierre();}
-  if(t==="alumnos"){renderAlumnos();}
-  if(t==="aps"){renderAPs();}
+  document.querySelectorAll('.nav button').forEach(b=>{
+    const txt=b.textContent.toLowerCase();
+    b.classList.toggle('active',
+      t==='cursadas'?txt.includes('cursadas'):
+      t==='alumnos'?txt.includes('alumno'):
+      t==='docentes'?txt.includes('docente'):
+      t==='informes'?txt.includes('informe'):
+      t==='chat'?txt.includes('asistente'):
+      txt.includes('config'));
+  });
+  ['cursadas','alumnos','docentes','informes','chat','config'].forEach(id=>{
+    const el=document.getElementById('tab-'+id);if(el)el.classList.toggle('hidden',id!==t);
+  });
+  if(t==='cursadas'){renderPerTabs();renderCursadas();}
+  if(t==='alumnos')renderAlumnos();
+  if(t==='docentes')renderDocentes();
+  if(t==='informes')renderInformeAlumnoList();
+  if(t==='config'){apsLocal=JSON.parse(JSON.stringify(aps));renderAreaList();renderAPPanel();}
 }
 
-// ─── CHAT IA ──────────────────────────────────────────────────────────────────
-function setSug(txt){document.getElementById("chatInput").value=txt;}
+// ════════════════════════════════════════════════════════════════════════════
+// CURSADAS TAB
+// ════════════════════════════════════════════════════════════════════════════
+function onGradoChange(){gradoActual=document.getElementById('gGrado').value;guardarTodo();renderCursadas();}
+function renderPerTabs(){
+  document.getElementById('perTabs').innerHTML=PERIODOS.map((p,i)=>`<button class="per-tab${p===periodoActual?' active':''}" onclick="periodoActual='${p}';sv('periodoActual',periodoActual);renderPerTabs();renderCursadas()"><span class="dot dot-${i+1}"></span>${p}</button>`).join('');
+}
+function renderCursadas(){
+  document.getElementById('cursadasTitle').textContent=`📚 Cursadas · ${periodoActual} 2026`;
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const fils=alumnos.filter(a=>a.grado===gradoActual);
+  if(!fils.length){
+    document.getElementById('cursadasList').innerHTML=`<div class="empty"><div class="empty-icon">📚</div>No hay alumnos en ${gradoActual} grado. Importá o agregá alumnos en la pestaña "Alumnos".</div>`;
+    return;
+  }
+  let html='<table><thead><tr><th style="min-width:200px">Materia</th><th class="center">Evaluaciones</th><th class="center">Notas cargadas</th><th class="center">Promedio</th><th class="center">Aprobados</th><th class="center">Desaprobados</th><th></th></tr></thead><tbody>';
+  mats.forEach(mat=>{
+    const evs=evalsDeMateria(mat,gradoActual,periodoActual);
+    const nEvals=evs.length;
+    let totalNotas=0;evs.forEach(e=>totalNotas+=Object.values(e.notas).filter(v=>v!==""&&v!==null&&v!==undefined).length);
+    const proms=fils.map(al=>promedioAlumnoMatPer(al.id,mat,gradoActual,periodoActual)).filter(v=>v!==null);
+    const promGen=proms.length?round2(proms.reduce((a,b)=>a+b,0)/proms.length):null;
+    const aprobados=proms.filter(v=>v>=4).length;
+    const desaprobados=proms.filter(v=>v<4).length;
+    html+=`<tr>
+      <td><strong>${escH(mat)}</strong></td>
+      <td class="center">${nEvals}</td>
+      <td class="center">${totalNotas}</td>
+      <td class="center"><span class="nota-badge ${notaCls(promGen)}">${formatN(promGen)}</span></td>
+      <td class="center" style="color:var(--green);font-weight:600">${aprobados||'—'}</td>
+      <td class="center" style="color:var(--red);font-weight:600">${desaprobados||'—'}</td>
+      <td class="center"><button class="btn btn-pri btn-sm" onclick="abrirMateria('${escH(mat)}')">📋 Ver</button></td>
+    </tr>`;
+  });
+  // Convivencia
+  const mb=fils.filter(al=>notaConvivencia(al.id,gradoActual,periodoActual)>=9).length;
+  const b=fils.filter(al=>{const c=notaConvivencia(al.id,gradoActual,periodoActual);return c>=7&&c<9}).length;
+  const r=fils.filter(al=>notaConvivencia(al.id,gradoActual,periodoActual)<7).length;
+  const totalConvEvs=convEventos.filter(e=>e.grado===gradoActual&&e.periodo===periodoActual).length;
+  html+=`<tr style="background:#fffbf0"><td><strong>🤝 Convivencia</strong></td><td class="center">${totalConvEvs} eventos</td><td class="center">${fils.length}</td>
+    <td class="center">MB: ${mb} · B: ${b} · R: ${r}</td><td class="center" style="color:var(--green)">${mb+b}</td>
+    <td class="center" style="color:var(--red)">${r}</td><td class="center"><button class="btn btn-orange btn-sm" onclick="document.querySelector('#tab-cursadas .card:nth-child(3)').scrollIntoView({behavior:'smooth'})">Ver ↓</button></td></tr>`;
+  html+='</tbody></table>';
+  document.getElementById('cursadasList').innerHTML=html;
+  renderConvivencia();
+}
 
-async function enviarChat(){
-  const inp=document.getElementById("chatInput");
-  const msg=inp.value.trim();
-  if(!msg||chatLoading)return;
-  inp.value=""; chatLoading=true;
-  document.getElementById("btnEnviar").disabled=true;
+function abrirMateria(mat){
+  materiaActual=mat;
+  document.getElementById('materiaDetalle').style.display='';
+  document.getElementById('materiaDetalleTitle').textContent=`${mat} · ${periodoActual} · ${gradoActual}`;
+  renderEvalList();
+  document.getElementById('materiaDetalle').scrollIntoView({behavior:'smooth'});
+}
+function cerrarDetalle(){document.getElementById('materiaDetalle').style.display='none';materiaActual=null;}
 
-  appendMsg("usuario",msg);
+// ════════════════════════════════════════════════════════════════════════════
+// CONVIVENCIA
+// ════════════════════════════════════════════════════════════════════════════
+function renderConvivencia(){
+  document.getElementById('convPerLabel').textContent=periodoActual;
+  const fils=alumnos.filter(a=>a.grado===gradoActual);
+  const evs=convEventos.filter(e=>e.grado===gradoActual&&e.periodo===periodoActual);
 
-  const sys=`Eres asistente docente del sistema educativo de Mendoza. Escala GEI: EP=1,EA=2,SA=3,NS=4. Primario 1° a 7°.
-Alumnos: ${alumnos.map(a=>`ID:${a.id} ${a.nombre}(${a.grado})`).join(" | ")}
-Calificaciones: ${Object.entries(calif).filter(([,v])=>v).slice(0,20).map(([k,v])=>`${k}→${v}`).join(" | ")||"Ninguna"}
-Llamados: ${Object.entries(llamados).map(([id,n])=>`ID${id}:${n}`).join(" | ")||"Ninguno"}
-Si el docente quiere cargar nota incluí al final: ACCION_JSON: {"tipo":"cargar_nota","datos":{"alumnoId":X,"area":"...","periodo":"...","aprendizaje":"...","nota":"EP|EA|SA|NS"}}
-Si quiere registrar llamado: ACCION_JSON: {"tipo":"registrar_llamado","datos":{"alumnoId":X,"motivo":"..."}}
-Áreas válidas: ${Object.keys(aps).join(", ")}
-Períodos válidos: 1° Período, 2° Período, 3° Período, Cierre Anual
-Respondé en español, brevemente.`;
-
-  try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:msg}]})
+  // Resumen por alumno
+  if(!fils.length){
+    document.getElementById('convResumen').innerHTML=`<div class="empty" style="padding:10px">Sin alumnos en ${gradoActual}.</div>`;
+    document.getElementById('convEventos').innerHTML='';
+    return;
+  }
+  let resHtml=`<table><thead><tr><th>Alumno/a</th>
+    ${CONV_CATEGORIAS.map(c=>`<th class="center" style="font-size:11px">${c}</th>`).join('')}
+    <th class="center">✅ Pos.</th><th class="center">⚠️ Neg.</th><th class="center">📝 Obs.</th>
+    <th class="center">Nota</th><th class="center">Calif.</th></tr></thead><tbody>`;
+  fils.forEach(al=>{
+    const evsAl=convEventosAlumno(al.id,gradoActual,periodoActual);
+    const porCat={};CONV_CATEGORIAS.forEach(c=>porCat[c]={pos:0,neg:0,obs:0});
+    let totalPos=0,totalNeg=0,totalObs=0;
+    evsAl.forEach(e=>{
+      if(porCat[e.categoria]){
+        if(e.tipo==='positivo')porCat[e.categoria].pos++;
+        if(e.tipo==='negativo')porCat[e.categoria].neg++;
+        if(e.tipo==='observacion')porCat[e.categoria].obs++;
+      }
+      if(e.tipo==='positivo')totalPos++;
+      if(e.tipo==='negativo')totalNeg++;
+      if(e.tipo==='observacion')totalObs++;
     });
+    const nota=notaConvivencia(al.id,gradoActual,periodoActual);
+    const cal=convCalificacion(nota);
+    resHtml+=`<tr><td><strong>${escH(al.nombre)}</strong></td>
+      ${CONV_CATEGORIAS.map(c=>{
+        const d=porCat[c];
+        const txt=[];
+        if(d.pos)txt.push(`<span style="color:var(--green)">+${d.pos}</span>`);
+        if(d.neg)txt.push(`<span style="color:var(--red)">-${d.neg}</span>`);
+        if(d.obs)txt.push(`<span style="color:var(--orange)">${d.obs}</span>`);
+        return`<td class="center" style="font-size:11px">${txt.join(' ')||'—'}</td>`;
+      }).join('')}
+      <td class="center" style="color:var(--green);font-weight:600">${totalPos||'—'}</td>
+      <td class="center" style="color:var(--red);font-weight:600">${totalNeg||'—'}</td>
+      <td class="center" style="color:var(--orange);font-weight:600">${totalObs||'—'}</td>
+      <td class="center"><span class="nota-badge ${notaCls(nota)}">${formatN(nota)}</span></td>
+      <td class="center"><span class="badge ${cal.cls}">${cal.label}</span></td>
+    </tr>`;
+  });
+  resHtml+=`</tbody></table>`;
+  document.getElementById('convResumen').innerHTML=resHtml;
+
+  // Lista de eventos recientes
+  const evsRecientes=evs.sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,20);
+  if(!evsRecientes.length){
+    document.getElementById('convEventos').innerHTML=`<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px">No hay eventos registrados en este período. Usá el botón <strong>"+ Registrar evento"</strong> para comenzar.</div>`;
+    return;
+  }
+  let evHtml=`<div style="margin-top:12px"><h3 style="font-size:13px;color:var(--pri);margin-bottom:8px">Últimos eventos registrados</h3>`;
+  evsRecientes.forEach(ev=>{
+    const al=alumnos.find(a=>a.id===ev.alumnoId);
+    const tipoInfo=CONV_TIPOS.find(t=>t.id===ev.tipo)||CONV_TIPOS[0];
+    evHtml+=`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
+      <span style="min-width:70px;color:var(--text3)">${ev.fecha}</span>
+      <span style="color:${tipoInfo.color};font-weight:600;min-width:20px">${tipoInfo.emoji}</span>
+      <strong style="min-width:140px">${al?escH(al.nombre):'?'}</strong>
+      <span class="badge badge-blue" style="font-size:10px">${ev.categoria}</span>
+      <span style="flex:1;color:var(--text2)">${escH(ev.descripcion||'')}</span>
+      <button class="btn btn-pri btn-xs" onclick="editarConvEvento(${ev.id})" title="Editar">✏️</button>
+      <button class="btn btn-red btn-xs" onclick="eliminarConvEvento(${ev.id})" title="Eliminar">✕</button>
+    </div>`;
+  });
+  evHtml+=`</div>`;
+  document.getElementById('convEventos').innerHTML=evHtml;
+}
+
+function eliminarConvEvento(id){
+  if(!confirm('¿Eliminar este evento?'))return;
+  const ev=convEventos.find(e=>e.id===id);
+  if(ev&&ev.tipo==='negativo'){llamados[ev.alumnoId]=Math.max(0,(llamados[ev.alumnoId]||0)-1);}
+  convEventos=convEventos.filter(e=>e.id!==id);guardarTodo();renderConvivencia();
+}
+
+function editarConvEvento(id){
+  const ev=convEventos.find(e=>e.id===id);if(!ev)return;
+  const al=alumnos.find(a=>a.id===ev.alumnoId);
+  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:550px"><div class="modal-head" style="background:var(--orange)"><h3>✏️ Editar evento de convivencia</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div style="margin-bottom:10px;font-weight:600;color:var(--pri)">${al?escH(al.nombre):'Alumno desconocido'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Fecha</label>
+        <input type="date" class="inp" id="ece_fecha" value="${ev.fecha}" style="width:100%"></div>
+      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Categoría</label>
+        <select class="sel" id="ece_cat" style="width:100%">
+          ${CONV_CATEGORIAS.map(c=>`<option${ev.categoria===c?' selected':''}>${c}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Tipo</label>
+        <select class="sel" id="ece_tipo" style="width:100%">
+          ${CONV_TIPOS.map(t=>`<option value="${t.id}"${ev.tipo===t.id?' selected':''}>${t.emoji} ${t.label}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Descripción</label>
+        <input class="inp" id="ece_desc" value="${escH(ev.descripcion||'')}" style="width:100%"></div>
+    </div>
+    <div style="margin-top:14px;display:flex;justify-content:space-between">
+      <button class="btn btn-red btn-sm" onclick="eliminarConvEvento(${id});this.closest('.modal-overlay').remove()">🗑️ Eliminar</button>
+      <button class="btn btn-green" onclick="guardarEdicionConv(${id})">💾 Guardar cambios</button>
+    </div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function guardarEdicionConv(id){
+  const ev=convEventos.find(e=>e.id===id);if(!ev)return;
+  const tipoAnterior=ev.tipo;
+  ev.fecha=document.getElementById('ece_fecha').value;
+  ev.categoria=document.getElementById('ece_cat').value;
+  ev.tipo=document.getElementById('ece_tipo').value;
+  ev.descripcion=document.getElementById('ece_desc').value.trim();
+  // Ajustar llamados si cambió el tipo
+  if(tipoAnterior==='negativo'&&ev.tipo!=='negativo'){llamados[ev.alumnoId]=Math.max(0,(llamados[ev.alumnoId]||0)-1);}
+  if(tipoAnterior!=='negativo'&&ev.tipo==='negativo'){llamados[ev.alumnoId]=(llamados[ev.alumnoId]||0)+1;}
+  guardarTodo();
+  document.querySelector('.modal-overlay').remove();
+  renderConvivencia();
+}
+
+function abrirNuevoEventoConv(){
+  const fils=alumnos.filter(a=>a.grado===gradoActual);
+  if(!fils.length){alert('No hay alumnos en '+gradoActual+'. Agregá alumnos primero.');return;}
+  const today=new Date().toISOString().split('T')[0];
+  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:600px"><div class="modal-head" style="background:var(--orange)"><h3>🤝 Registrar evento de convivencia</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Alumno/a</label>
+        <select class="sel" id="ce_alumno" style="width:100%">
+          ${fils.map(a=>`<option value="${a.id}">${escH(a.nombre)}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Fecha</label>
+        <input type="date" class="inp" id="ce_fecha" value="${today}" style="width:100%"></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Categoría</label>
+        <select class="sel" id="ce_categoria" style="width:100%">
+          ${CONV_CATEGORIAS.map(c=>`<option>${c}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tipo de evento</label>
+        <select class="sel" id="ce_tipo" style="width:100%">
+          ${CONV_TIPOS.map(t=>`<option value="${t.id}">${t.emoji} ${t.label}</option>`).join('')}
+        </select></div>
+    </div>
+    <div style="margin-top:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Descripción del evento</label>
+      <input class="inp" id="ce_desc" placeholder="Ej: Faltó el respeto a un compañero durante la clase" style="width:100%"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="ce_multiple"> Registrar para varios alumnos a la vez
+      </label>
+    </div>
+    <div id="ce_multipleList" style="display:none;margin-top:8px;max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px">
+      ${fils.map(a=>`<label style="display:block;font-size:12px;padding:2px 0"><input type="checkbox" value="${a.id}" class="ce_multi_check"> ${escH(a.nombre)}</label>`).join('')}
+    </div>
+    <div style="margin-top:16px;text-align:right"><button class="btn btn-orange" onclick="crearConvEvento()">Registrar evento</button></div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+  document.getElementById('ce_multiple').onchange=function(){
+    document.getElementById('ce_multipleList').style.display=this.checked?'block':'none';
+    document.getElementById('ce_alumno').disabled=this.checked;
+  };
+}
+
+function crearConvEvento(){
+  const fecha=document.getElementById('ce_fecha').value;
+  const categoria=document.getElementById('ce_categoria').value;
+  const tipo=document.getElementById('ce_tipo').value;
+  const desc=document.getElementById('ce_desc').value.trim();
+  const multiple=document.getElementById('ce_multiple').checked;
+
+  let alumnoIds=[];
+  if(multiple){
+    document.querySelectorAll('.ce_multi_check:checked').forEach(cb=>alumnoIds.push(parseInt(cb.value)));
+    if(!alumnoIds.length){alert('Seleccioná al menos un alumno.');return;}
+  }else{
+    alumnoIds=[parseInt(document.getElementById('ce_alumno').value)];
+  }
+
+  alumnoIds.forEach(alId=>{
+    convEventos.push({
+      id:nextConvId++,
+      alumnoId:alId,
+      grado:gradoActual,
+      periodo:periodoActual,
+      fecha,categoria,tipo,
+      descripcion:desc
+    });
+    // Actualizar llamados para compatibilidad
+    if(tipo==='negativo'){llamados[alId]=(llamados[alId]||0)+1;}
+  });
+
+  guardarTodo();
+  document.querySelector('.modal-overlay').remove();
+  renderConvivencia();
+  renderCursadas();
+}
+
+function renderEvalList(){
+  if(!materiaActual)return;
+  const evs=evalsDeMateria(materiaActual,gradoActual,periodoActual).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const fils=alumnos.filter(a=>a.grado===gradoActual);
+  if(!evs.length){
+    document.getElementById('evalList').innerHTML=`<div class="empty"><div class="empty-icon">📝</div>No hay evaluaciones cargadas para ${materiaActual} en este período.<br><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="abrirNuevaEval()">+ Crear primera evaluación</button></div>`;
+    return;
+  }
+  let html='';
+  evs.forEach(ev=>{
+    const tipoInfo=TIPOS_EVAL.find(t=>t.id===ev.tipo)||TIPOS_EVAL[0];
+    const notasCargadas=Object.values(ev.notas).filter(v=>v!==""&&v!==null&&v!==undefined).length;
+    const vals=Object.values(ev.notas).filter(v=>v!==""&&v!==null&&v!==undefined).map(Number);
+    const prom=vals.length?round2(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+    const aus=(ev.ausentes||[]).length;
+    html+=`<div class="eval-item" onclick="abrirCargarNotas(${ev.id})">
+      <div class="eval-date">${ev.fecha||'Sin fecha'}</div>
+      <div class="eval-tipo"><span class="${tipoInfo.css}">${ev.subtipo||tipoInfo.label}</span></div>
+      <div class="eval-desc">${escH(ev.descripcion||'Sin descripción')}${ev.ap?` <span style="font-size:11px;color:var(--purple)">(AP: ${escH(ev.ap)})</span>`:''}</div>
+      <div class="eval-stats">
+        <span>📝 <strong>${notasCargadas}/${fils.length}</strong></span>
+        <span>📊 <strong class="${notaCls(prom)}" style="color:${notaColor(prom)}">${formatN(prom)}</strong></span>
+        ${aus?`<span style="color:var(--red)">🚫 ${aus} aus.</span>`:''}
+      </div>
+      <button class="btn btn-pri btn-xs" onclick="event.stopPropagation();abrirCargarNotas(${ev.id})" title="Editar notas">✏️</button>
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();eliminarEval(${ev.id})" title="Eliminar">🗑️</button>
+    </div>`;
+  });
+  document.getElementById('evalList').innerHTML=html;
+}
+
+function eliminarEval(id){
+  if(!confirm('¿Eliminar esta evaluación?'))return;
+  evaluaciones=evaluaciones.filter(e=>e.id!==id);guardarTodo();renderEvalList();renderCursadas();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL: NUEVA EVALUACIÓN
+// ════════════════════════════════════════════════════════════════════════════
+function abrirNuevaEval(){
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const apsList=materiaActual?(aps[materiaActual]||[]):[];
+  const today=new Date().toISOString().split('T')[0];
+  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+  <div class="modal"><div class="modal-head"><h3>+ Nueva Evaluación</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Materia</label>
+        <select class="sel" id="ne_mat" style="width:100%" onchange="updateAPSelect()">
+          ${mats.map(m=>`<option${m===materiaActual?' selected':''}>${m}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Fecha</label>
+        <input type="date" class="inp" id="ne_fecha" value="${today}" style="width:100%"></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tipo de evaluación</label>
+        <select class="sel" id="ne_tipo" style="width:100%" onchange="updateSubtipos()">
+          ${TIPOS_EVAL.map(t=>`<option value="${t.id}">${t.label}</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subtipo</label>
+        <select class="sel" id="ne_subtipo" style="width:100%"></select></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">AP relacionado (opcional)</label>
+        <select class="sel" id="ne_ap" style="width:100%"><option value="">— Ninguno —</option></select></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Descripción / Contenidos</label>
+        <input class="inp" id="ne_desc" placeholder="Ej: Fracciones y decimales" style="width:100%"></div>
+    </div>
+    <div style="margin-top:16px;text-align:right"><button class="btn btn-green" onclick="crearEval()">Crear evaluación</button></div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+  updateSubtipos();updateAPSelect();
+}
+function updateSubtipos(){
+  const tipo=document.getElementById('ne_tipo').value;
+  const info=TIPOS_EVAL.find(t=>t.id===tipo);
+  document.getElementById('ne_subtipo').innerHTML=info.subtypes.map(s=>`<option>${s}</option>`).join('');
+}
+function updateAPSelect(){
+  const mat=document.getElementById('ne_mat').value;
+  const apsl=aps[mat]||[];
+  document.getElementById('ne_ap').innerHTML=`<option value="">— Ninguno —</option>`+apsl.map(a=>`<option>${a}</option>`).join('');
+}
+function crearEval(){
+  const mat=document.getElementById('ne_mat').value;
+  const fecha=document.getElementById('ne_fecha').value;
+  const tipo=document.getElementById('ne_tipo').value;
+  const subtipo=document.getElementById('ne_subtipo').value;
+  const ap=document.getElementById('ne_ap').value;
+  const desc=document.getElementById('ne_desc').value.trim();
+  const ev={id:nextEvalId++,materia:mat,grado:gradoActual,periodo:periodoActual,tipo,subtipo,descripcion:desc,fecha,ap,notas:{},ausentes:[]};
+  evaluaciones.push(ev);guardarTodo();
+  document.querySelector('.modal-overlay').remove();
+  materiaActual=mat;
+  document.getElementById('materiaDetalle').style.display='';
+  document.getElementById('materiaDetalleTitle').textContent=`${mat} · ${periodoActual} · ${gradoActual}`;
+  renderEvalList();renderCursadas();
+  abrirCargarNotas(ev.id);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL: CARGAR NOTAS
+// ════════════════════════════════════════════════════════════════════════════
+function abrirCargarNotas(evalId){
+  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+  const fils=alumnos.filter(a=>a.grado===ev.grado).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const tipoInfo=TIPOS_EVAL.find(t=>t.id===ev.tipo)||TIPOS_EVAL[0];
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const apsl=aps[ev.materia]||[];
+  let html=`<div class="modal-overlay" id="modalNotas" onclick="if(event.target===this)cerrarModalNotas()">
+  <div class="modal"><div class="modal-head"><h3>📝 ${escH(ev.descripcion||ev.subtipo)}</h3><button class="modal-close" onclick="cerrarModalNotas()">✕</button></div>
+  <div class="modal-body">
+    <!-- Datos editables de la evaluación -->
+    <details style="margin-bottom:14px;border:1px solid var(--border);border-radius:8px;padding:10px">
+      <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--pri)">✏️ Editar datos de esta evaluación</summary>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Fecha</label>
+          <input type="date" class="inp" value="${ev.fecha}" style="width:100%" onchange="editarEvalCampo(${ev.id},'fecha',this.value)"></div>
+        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Tipo</label>
+          <select class="sel" style="width:100%" onchange="editarEvalCampo(${ev.id},'tipo',this.value);editarEvalCampo(${ev.id},'subtipo',this.options[this.selectedIndex].getAttribute('data-sub'))">
+            ${TIPOS_EVAL.flatMap(t=>t.subtypes.map(s=>`<option value="${t.id}" data-sub="${s}"${ev.subtipo===s?' selected':''}>${s}</option>`)).join('')}
+          </select></div>
+        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Descripción / Contenidos</label>
+          <input class="inp" value="${escH(ev.descripcion||'')}" style="width:100%" onchange="editarEvalCampo(${ev.id},'descripcion',this.value)"></div>
+        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">AP relacionado</label>
+          <select class="sel" style="width:100%" onchange="editarEvalCampo(${ev.id},'ap',this.value)">
+            <option value="">— Ninguno —</option>
+            ${apsl.map(a=>`<option${ev.ap===a?' selected':''}>${a}</option>`).join('')}
+          </select></div>
+      </div>
+    </details>
+
+    <div class="row" style="margin-bottom:10px;font-size:12px;color:var(--text2)">
+      <span class="${tipoInfo.css}">${ev.subtipo}</span>
+      <span>📅 ${ev.fecha}</span>
+      <span>📚 ${ev.materia}</span>
+      ${ev.ap?`<span style="color:var(--purple)">AP: ${ev.ap}</span>`:''}
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">Modificá las notas directamente · Borrá con ✕</span>
+    </div>
+    <table><thead><tr>
+      <th style="width:35px">Nº</th>
+      <th>Alumno/a</th>
+      <th class="center" style="width:100px">Nota (0–10)</th>
+      <th class="center" style="width:70px">Ausente</th>
+      <th class="center" style="width:50px">Borrar</th>
+    </tr></thead><tbody>`;
+  fils.forEach((al,i)=>{
+    const nota=ev.notas[al.id];const nVal=(nota!==undefined&&nota!==null&&nota!=="")?nota:"";
+    const aus=(ev.ausentes||[]).includes(al.id);
+    const tieneNota=nVal!==""&&!aus;
+    html+=`<tr>
+      <td class="center" style="color:var(--text3)">${i+1}</td>
+      <td><strong>${escH(al.nombre)}</strong></td>
+      <td class="center"><input type="number" min="0" max="10" step="0.25" class="nota-inp" value="${nVal}" id="nota_${evalId}_${al.id}" onchange="guardarNotaEval(${evalId},${al.id},this.value)" ${aus?'disabled style="opacity:.3"':''}></td>
+      <td class="center"><input type="checkbox" ${aus?'checked':''} onchange="toggleAusente(${evalId},${al.id},this.checked)"></td>
+      <td class="center">${tieneNota?`<button class="btn btn-red btn-xs" onclick="borrarNotaEval(${evalId},${al.id})" title="Borrar nota">✕</button>`:'—'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table>
+    <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+      <button class="btn btn-red btn-sm" onclick="if(confirm('¿Eliminar TODA esta evaluación y sus notas?')){eliminarEval(${ev.id});cerrarModalNotas();}">🗑️ Eliminar evaluación completa</button>
+      <button class="btn btn-green" onclick="cerrarModalNotas()">✅ Listo</button>
+    </div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function cerrarModalNotas(){
+  const m=document.getElementById('modalNotas');if(m)m.remove();
+  renderEvalList();renderCursadas();
+}
+
+function editarEvalCampo(evalId,campo,valor){
+  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+  ev[campo]=valor;guardarTodo();
+}
+
+function borrarNotaEval(evalId,alId){
+  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+  delete ev.notas[alId];guardarTodo();
+  // Refrescar modal
+  cerrarModalNotas();abrirCargarNotas(evalId);
+}
+function guardarNotaEval(evalId,alId,val){
+  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+  ev.notas[alId]=val===""?"":round2(parseFloat(val));
+  guardarTodo();
+}
+function toggleAusente(evalId,alId,checked){
+  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+  if(!ev.ausentes)ev.ausentes=[];
+  if(checked){ev.ausentes.push(alId);delete ev.notas[alId];}
+  else{ev.ausentes=ev.ausentes.filter(id=>id!==alId);}
+  const inp=document.getElementById(`nota_${evalId}_${alId}`);
+  if(inp){inp.disabled=checked;inp.style.opacity=checked?'.3':'1';if(checked)inp.value='';}
+  guardarTodo();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ALUMNOS
+// ════════════════════════════════════════════════════════════════════════════
+function selGradoAlumnos(g,btn){
+  gradoAlumnos=g;
+  document.querySelectorAll('#tab-alumnos .per-tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderAlumnos();
+}
+function renderAlumnos(){
+  const g=gradoAlumnos;
+  document.getElementById('alTituloCarga').textContent=`📂 Cargar alumnos de ${g} Grado`;
+  document.getElementById('alTituloListado').innerHTML=`👨‍🎓 Alumnos de ${g} Grado`;
+  const fils=alumnos.filter(a=>a.grado===g).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  document.getElementById('alConteo').textContent=`(${fils.length} alumno${fils.length!==1?'s':''})`;
+
+  // Docente a cargo selector
+  const selDoc=document.getElementById('docenteACargo');
+  selDoc.innerHTML=`<option value="">— Sin asignar —</option>`+docentes.map(d=>`<option value="${d.id}"${docenteACargo[g]===d.id?' selected':''}>${escH(d.nombre)}</option>`).join('');
+
+  if(!fils.length){
+    document.getElementById('alumnosLista').innerHTML=`<div class="empty" style="padding:24px"><div class="empty-icon">👨‍🎓</div>
+      <p style="margin-bottom:6px">No hay alumnos en <strong>${g} Grado</strong>.</p>
+      <p style="font-size:12px;color:var(--text2)">Usá las opciones de arriba para cargar el listado desde un Excel o agregarlos uno por uno.</p></div>`;
+    return;
+  }
+  let html='<table><thead><tr><th style="width:35px">Nº</th><th>Apellido y Nombre</th><th class="center">Grado</th><th class="center">Llamados</th><th class="center">Convivencia</th><th style="width:70px"></th></tr></thead><tbody>';
+  fils.forEach((al,i)=>{
+    const ll=llamados[al.id]||0;const cv=notaConvivencia(al.id,al.grado,periodoActual);const cal=convCalificacion(cv);
+    html+=`<tr>
+      <td class="center" style="color:var(--text3)">${i+1}</td>
+      <td><strong>${escH(al.nombre)}</strong></td>
+      <td class="center">${al.grado}</td>
+      <td class="center" style="color:${ll>0?'var(--red)':'var(--text3)'}"><strong>${ll}</strong></td>
+      <td class="center"><span class="nota-badge ${notaCls(cv)}">${formatN(cv)}</span> <span class="badge ${cal.cls}" style="font-size:10px">${cal.label}</span></td>
+      <td class="center">
+        <button class="btn btn-outline btn-xs" onclick="editarAlumno(${al.id})" title="Editar">✏️</button>
+        <button class="btn btn-red btn-xs" onclick="eliminarAlumno(${al.id})" title="Eliminar">✕</button>
+      </td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('alumnosLista').innerHTML=html;
+  updateHeaderStats();
+}
+function agregarAlumno(){
+  const n=document.getElementById("nuevoNombre").value.trim();
+  if(!n)return;
+  alumnos.push({id:nextId++,nombre:n,grado:gradoAlumnos});
+  document.getElementById("nuevoNombre").value="";
+  document.getElementById("nuevoNombre").focus();
+  guardarTodo();renderAlumnos();
+}
+function editarAlumno(id){
+  const al=alumnos.find(a=>a.id===id);if(!al)return;
+  const nuevoNombre=prompt('Editar nombre:',al.nombre);
+  if(nuevoNombre!==null&&nuevoNombre.trim()){al.nombre=nuevoNombre.trim();guardarTodo();renderAlumnos();}
+}
+function eliminarAlumno(id){if(!confirm("¿Eliminar este alumno?"))return;alumnos=alumnos.filter(a=>a.id!==id);guardarTodo();renderAlumnos();}
+function cambiarLlamado(id,d){llamados[id]=Math.max(0,(llamados[id]||0)+d);guardarTodo();renderAlumnos();}
+function guardarDocenteACargo(){
+  const val=document.getElementById('docenteACargo').value;
+  docenteACargo[gradoAlumnos]=val?parseInt(val):'';
+  guardarTodo();
+}
+function descargarPlantillaAlumnos(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([
+    ["Nombre y Apellido"],
+    ["ABRAHAM IRIART, JOAQUÍN MARÍA"],
+    ["BENEGAS GONZALEZ, Tomás"],
+    ["BORQUEZ DALVIT, Pilar Ernestina"],
+  ]);
+  ws["!cols"]=[{wch:35}];
+  const wsI=XLSX.utils.aoa_to_sheet([
+    ["INSTRUCCIONES"],[""],
+    ["Poné los nombres de los alumnos en la columna A, uno por fila."],
+    ["El grado se asigna según lo que tengas seleccionado en la app."],
+    [""],["También podés subir la planilla oficial de la DGE"],
+    ["('Planilla general de notas') y se importa todo automáticamente."]
+  ]);
+  wsI["!cols"]=[{wch:60}];
+  XLSX.utils.book_append_sheet(wb,ws,"Alumnos");
+  XLSX.utils.book_append_sheet(wb,wsI,"Instrucciones");
+  XLSX.writeFile(wb,`Plantilla_Alumnos_${gradoAlumnos}.xlsx`);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DOCENTES
+// ════════════════════════════════════════════════════════════════════════════
+function renderDocentes(){
+  // Llenar select de materia para agregar
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  document.getElementById('nuevoDocMateria').innerHTML=`<option value="">— Materia (opcional) —</option>`+mats.map(m=>`<option>${m}</option>`).join('');
+
+  if(!docentes.length){
+    document.getElementById('docentesLista').innerHTML=`<div class="empty" style="padding:24px"><div class="empty-icon">👩‍🏫</div>
+      <p>No hay docentes registrados.</p><p style="font-size:12px;color:var(--text2)">Cargá docentes desde Excel o agregarlos manualmente arriba.</p></div>`;
+    return;
+  }
+  let html='<table><thead><tr><th>Docente</th><th>Materia(s)</th><th>Grado(s)</th><th style="width:120px"></th></tr></thead><tbody>';
+  docentes.forEach(d=>{
+    const asigs=d.asignaciones||[];
+    const matsStr=asigs.length?[...new Set(asigs.map(a=>a.materia).filter(Boolean))].join(', '):'<span style="color:var(--text3)">Sin asignar</span>';
+    const gdsStr=asigs.length?[...new Set(asigs.map(a=>a.grado).filter(Boolean))].join(', '):'<span style="color:var(--text3)">—</span>';
+    html+=`<tr>
+      <td><strong>${escH(d.nombre)}</strong></td>
+      <td style="font-size:12px">${matsStr}</td>
+      <td class="center">${gdsStr}</td>
+      <td class="center">
+        <button class="btn btn-pri btn-xs" onclick="editarDocente(${d.id})" title="Editar / Asignar">✏️ Asignar</button>
+        <button class="btn btn-red btn-xs" onclick="eliminarDocente(${d.id})">✕</button>
+      </td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('docentesLista').innerHTML=html;
+}
+
+function agregarDocente(){
+  const nombre=document.getElementById('nuevoDocNombre').value.trim();
+  if(!nombre){alert('Escribí el nombre del docente.');return;}
+  const materia=document.getElementById('nuevoDocMateria').value;
+  const grado=document.getElementById('nuevoDocGrado').value;
+  const asigs=[];
+  if(materia||grado) asigs.push({materia:materia||'',grado:grado||''});
+  docentes.push({id:nextDocId++,nombre,asignaciones:asigs});
+  document.getElementById('nuevoDocNombre').value='';
+  guardarTodo();renderDocentes();
+}
+
+function eliminarDocente(id){
+  if(!confirm('¿Eliminar este docente?'))return;
+  docentes=docentes.filter(d=>d.id!==id);
+  // Limpiar docenteACargo si era este
+  Object.keys(docenteACargo).forEach(g=>{if(docenteACargo[g]===id)delete docenteACargo[g];});
+  guardarTodo();renderDocentes();
+}
+
+function editarDocente(id){
+  const doc=docentes.find(d=>d.id===id);if(!doc)return;
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const asigs=doc.asignaciones||[];
+  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:650px"><div class="modal-head"><h3>👩‍🏫 ${escH(doc.nombre)} — Asignaciones</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Nombre</label>
+      <input class="inp" id="edDocNombre" value="${escH(doc.nombre)}" style="width:100%" onchange="docentes.find(d=>d.id===${id}).nombre=this.value.trim();guardarTodo();">
+    </div>
+    <h4 style="font-size:13px;color:var(--pri);margin-bottom:8px">Materias y grados asignados:</h4>
+    <div id="edDocAsigs">`;
+  asigs.forEach((a,i)=>{
+    html+=`<div class="row" style="margin-bottom:6px" id="asig_${i}">
+      <select class="sel" style="flex:1" onchange="docentes.find(d=>d.id===${id}).asignaciones[${i}].materia=this.value;guardarTodo();">
+        <option value="">— Materia —</option>${mats.map(m=>`<option${a.materia===m?' selected':''}>${m}</option>`).join('')}
+      </select>
+      <select class="sel" onchange="docentes.find(d=>d.id===${id}).asignaciones[${i}].grado=this.value;guardarTodo();">
+        <option value="">— Grado —</option>${GRADOS.map(g=>`<option${a.grado===g?' selected':''}>${g}</option>`).join('')}
+      </select>
+      <button class="btn btn-red btn-xs" onclick="docentes.find(d=>d.id===${id}).asignaciones.splice(${i},1);guardarTodo();this.closest('.modal-overlay').remove();editarDocente(${id});">✕</button>
+    </div>`;
+  });
+  html+=`</div>
+    <button class="btn btn-green btn-sm" style="margin-top:8px" onclick="docentes.find(d=>d.id===${id}).asignaciones.push({materia:'',grado:''});guardarTodo();this.closest('.modal-overlay').remove();editarDocente(${id});">+ Agregar asignación</button>
+    <div style="margin-top:16px;text-align:right"><button class="btn btn-pri" onclick="this.closest('.modal-overlay').remove();renderDocentes();">✅ Listo</button></div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function importarDocentes(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const grid=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+      if(!grid.length){showMsgDoc("❌ Hoja vacía.","error");return;}
+      const headers=grid[0];
+      const colNombre=headers.findIndex(h=>/nombre|docente|apellido/i.test(String(h)));
+      const colMateria=headers.findIndex(h=>/materia|area|área|asignatura/i.test(String(h)));
+      const colGrado=headers.findIndex(h=>/grado|curso|año/i.test(String(h)));
+      const nameCol=colNombre>=0?colNombre:0;
+      let nuevos=0;
+      for(let r=1;r<grid.length;r++){
+        const nombre=String(grid[r][nameCol]||"").trim();
+        if(!nombre)continue;
+        let doc=docentes.find(d=>d.nombre.toLowerCase()===nombre.toLowerCase());
+        if(!doc){doc={id:nextDocId++,nombre,asignaciones:[]};docentes.push(doc);nuevos++;}
+        const mat=colMateria>=0?String(grid[r][colMateria]||"").trim():"";
+        const grd=colGrado>=0?String(grid[r][colGrado]||"").trim():"";
+        if(mat||grd){
+          const gNorm=GRADOS.find(g=>g.replace("°","")===grd.replace(/[°\s]/g,""))||grd;
+          doc.asignaciones.push({materia:mat,grado:gNorm});
+        }
+      }
+      guardarTodo();renderDocentes();
+      showMsgDoc(`✅ ${nuevos} docente(s) importado(s).`,"ok");
+    }catch(err){showMsgDoc("❌ "+err.message,"error");}
+    input.value="";
+  };reader.readAsArrayBuffer(file);
+}
+function showMsgDoc(m,t){const el=document.getElementById('importMsgDoc');el.style.display='block';el.style.color=t==='ok'?'var(--green)':'var(--red)';el.style.background=t==='ok'?'#e8f5e9':'#ffebee';el.textContent=m;setTimeout(()=>el.style.display='none',8000);}
+
+function descargarPlantillaDocentes(){
+  const wb=XLSX.utils.book_new();
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const ws=XLSX.utils.aoa_to_sheet([
+    ["Nombre","Materia","Grado"],
+    ["García, María","Matemática","7°"],
+    ["López, Juan","Lengua","7°"],
+    ["Pérez, Ana","Ciencias Naturales",""],
+  ]);
+  ws["!cols"]=[{wch:25},{wch:30},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,"Docentes");
+  XLSX.writeFile(wb,"Plantilla_Docentes.xlsx");
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INFORMES
+// ════════════════════════════════════════════════════════════════════════════
+function renderInformeAlumnoList(){
+  const g=document.getElementById('infGrado').value;
+  const sel=document.getElementById('infAlumno');
+  const fils=alumnos.filter(a=>a.grado===g);
+  sel.innerHTML=`<option value="">— Seleccioná un alumno —</option>`+fils.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
+}
+function renderInforme(){
+  const alId=parseInt(document.getElementById('infAlumno').value);
+  const al=alumnos.find(a=>a.id===alId);
+  if(!al){document.getElementById('informeContent').innerHTML=`<div class="empty"><div class="empty-icon">📊</div>Seleccioná un alumno.</div>`;return;}
+  const g=al.grado;
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const ll=llamados[al.id]||0;
+
+  // Stats generales
+  let promsPer={};
+  PERIODOS.forEach(p=>{promsPer[p]=promedioGeneralAlumno(al.id,g,p);});
+
+  let html=`<div class="profile-header">
+    <div class="profile-avatar">${al.nombre.charAt(0)}</div>
+    <div><div class="profile-name">${escH(al.nombre)}</div><div class="profile-sub">${g} Grado · P276 FASTA JUAN PABLO II · 2026</div></div>
+  </div>`;
+
+  // Promedios por período
+  html+=`<div class="stats-grid" style="margin-top:16px">`;
+  PERIODOS.forEach((p,i)=>{
+    const prom=promsPer[p];
+    html+=`<div class="stat-card"><div class="stat-val" style="color:${notaColor(prom)}">${formatN(prom)}</div><div class="stat-label">${p}</div></div>`;
+  });
+  html+=`<div class="stat-card"><div class="stat-val" style="color:${ll>0?'var(--red)':'var(--green)'}">${ll}</div><div class="stat-label">Llamados de atención</div></div>`;
+  html+=`<div class="stat-card"><div class="stat-val" style="color:${notaColor(convivencia(ll))}">${notaConvivencia(al.id,g,PERIODOS[0])}</div><div class="stat-label">Convivencia 1° Per.</div></div>`;
+  html+=`</div>`;
+
+  // Detalle por materia
+  html+=`<h3 style="margin:16px 0 10px;font-size:14px;color:var(--pri)">Detalle por materia</h3>`;
+  let fortalezas=[], debilidades=[];
+  mats.forEach(mat=>{
+    const evsPer={};
+    PERIODOS.forEach(p=>{
+      const evs=evalsDeMateria(mat,g,p);
+      const detalles=evs.map(e=>{
+        const nota=e.notas[al.id];const aus=(e.ausentes||[]).includes(al.id);
+        return{fecha:e.fecha,subtipo:e.subtipo,desc:e.descripcion,nota:aus?'Ausente':nota,ap:e.ap};
+      });
+      const prom=promedioAlumnoMatPer(al.id,mat,g,p);
+      evsPer[p]={detalles,prom};
+    });
+    const promAnual=promedioAlumnoMatAnual(al.id,mat,g);
+    if(promAnual!==null){
+      if(promAnual>=7) fortalezas.push(mat);
+      if(promAnual<4) debilidades.push(mat);
+    }
+
+    html+=`<div class="informe-area">
+      <h4>${escH(mat)} <span class="nota-badge ${notaCls(promAnual)}" style="margin-left:8px">${formatN(promAnual)}</span></h4>
+      <div class="informe-detalle">`;
+
+    PERIODOS.forEach(p=>{
+      const info=evsPer[p];
+      if(!info.detalles.length)return;
+      html+=`<div style="margin-top:6px"><strong>${p}</strong> — Promedio: <span style="color:${notaColor(info.prom)};font-weight:700">${formatN(info.prom)}</span></div>`;
+      html+=`<table style="margin:4px 0 8px;font-size:12px"><thead><tr><th style="padding:3px 8px">Fecha</th><th style="padding:3px 8px">Tipo</th><th style="padding:3px 8px">Contenido</th><th style="padding:3px 8px">AP</th><th class="center" style="padding:3px 8px">Nota</th></tr></thead><tbody>`;
+      info.detalles.forEach(d=>{
+        const esAus=d.nota==='Ausente';
+        html+=`<tr><td style="padding:3px 8px;font-size:11px">${d.fecha}</td><td style="padding:3px 8px;font-size:11px">${d.subtipo}</td>
+          <td style="padding:3px 8px;font-size:11px">${escH(d.desc||'')}</td><td style="padding:3px 8px;font-size:11px">${escH(d.ap||'')}</td>
+          <td class="center" style="padding:3px 8px"><span class="nota-badge ${esAus?'nota-baja':notaCls(d.nota)}">${esAus?'AUS':formatN(d.nota)}</span></td></tr>`;
+      });
+      html+=`</tbody></table>`;
+    });
+    html+=`</div></div>`;
+  });
+
+  // Análisis
+  html+=`<div class="informe-area" style="border-left-color:var(--orange)">
+    <h4>🤝 Convivencia</h4><div class="informe-detalle">`;
+  PERIODOS.forEach(p=>{
+    const evsConv=convEventosAlumno(al.id,g,p);
+    if(!evsConv.length)return;
+    const nota=notaConvivencia(al.id,g,p);const cal=convCalificacion(nota);
+    html+=`<div style="margin-top:6px"><strong>${p}</strong> — Nota: <span class="nota-badge ${notaCls(nota)}">${formatN(nota)}</span> <span class="badge ${cal.cls}">${cal.label}</span></div>`;
+    html+=`<table style="margin:4px 0 8px;font-size:12px"><thead><tr><th style="padding:3px 8px">Fecha</th><th style="padding:3px 8px">Tipo</th><th style="padding:3px 8px">Categoría</th><th style="padding:3px 8px">Descripción</th></tr></thead><tbody>`;
+    evsConv.forEach(e=>{
+      const ti=CONV_TIPOS.find(t=>t.id===e.tipo)||CONV_TIPOS[0];
+      html+=`<tr><td style="padding:3px 8px;font-size:11px">${e.fecha}</td><td style="padding:3px 8px;font-size:11px;color:${ti.color}">${ti.emoji} ${ti.label}</td>
+        <td style="padding:3px 8px;font-size:11px">${escH(e.categoria)}</td><td style="padding:3px 8px;font-size:11px">${escH(e.descripcion||'')}</td></tr>`;
+    });
+    html+=`</tbody></table>`;
+  });
+  const llTotal=convEventos.filter(e=>e.alumnoId===al.id&&e.tipo==='negativo').length;
+  if(!convEventos.filter(e=>e.alumnoId===al.id).length){
+    const ll=llamados[al.id]||0;
+    html+=`<p style="font-size:12px">Llamados de atención registrados (sistema anterior): <strong>${ll}</strong></p>`;
+  }
+  html+=`</div></div>`;
+
+  html+=`<div style="margin-top:16px;padding:16px;background:#f8fafe;border-radius:10px;border:1px solid #d0e3f0">
+    <h3 style="font-size:14px;color:var(--pri);margin-bottom:8px">📊 Análisis de rendimiento</h3>`;
+  if(fortalezas.length) html+=`<p style="font-size:13px;margin-bottom:6px">✅ <strong>Fortalezas:</strong> ${fortalezas.join(', ')} (promedio ≥ 7)</p>`;
+  if(debilidades.length) html+=`<p style="font-size:13px;margin-bottom:6px">⚠️ <strong>Áreas a reforzar:</strong> ${debilidades.join(', ')} (promedio < 4)</p>`;
+  const matsMedia=mats.filter(m=>{const p=promedioAlumnoMatAnual(al.id,m,g);return p!==null&&p>=4&&p<7;});
+  if(matsMedia.length) html+=`<p style="font-size:13px;margin-bottom:6px">📈 <strong>En desarrollo:</strong> ${matsMedia.join(', ')} (entre 4 y 7)</p>`;
+  if(ll>1) html+=`<p style="font-size:13px">🔔 El alumno tiene <strong>${ll} llamados de atención</strong>. Se recomienda seguimiento del área de convivencia.</p>`;
+  // Convivencia analysis
+  const negTotal=convEventos.filter(e=>e.alumnoId===al.id&&e.tipo==='negativo').length;
+  const posTotal=convEventos.filter(e=>e.alumnoId===al.id&&e.tipo==='positivo').length;
+  if(negTotal>2) html+=`<p style="font-size:13px">🔔 <strong>Convivencia:</strong> ${negTotal} eventos negativos registrados. Se recomienda seguimiento y trabajo con la familia.</p>`;
+  if(posTotal>0) html+=`<p style="font-size:13px">🌟 <strong>Aspectos positivos:</strong> ${posTotal} evento(s) positivo(s) de convivencia registrado(s).</p>`;
+  // Categorías problemáticas
+  const catProblemas={};convEventos.filter(e=>e.alumnoId===al.id&&e.tipo==='negativo').forEach(e=>{catProblemas[e.categoria]=(catProblemas[e.categoria]||0)+1;});
+  const catList=Object.entries(catProblemas).sort((a,b)=>b[1]-a[1]);
+  if(catList.length) html+=`<p style="font-size:13px">📋 <strong>Áreas de convivencia a trabajar:</strong> ${catList.map(([c,n])=>`${c} (${n})`).join(', ')}</p>`;
+  if(!fortalezas.length&&!debilidades.length&&!matsMedia.length) html+=`<p style="font-size:13px;color:var(--text3)">No hay suficientes evaluaciones cargadas para generar un análisis.</p>`;
+  html+=`</div>`;
+
+  document.getElementById('informeContent').innerHTML=html;
+}
+function imprimirInforme(){
+  const content=document.getElementById('informeContent').innerHTML;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe</title><style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#333}h3,h4{color:#4A6572}.profile-header{display:flex;align-items:center;gap:16px;margin-bottom:16px}.profile-avatar{width:50px;height:50px;border-radius:50%;background:#4A6572;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}.profile-name{font-size:18px;font-weight:700}.profile-sub{font-size:11px;color:#666}.stats-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stat-card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;min-width:100px}.stat-val{font-size:18px;font-weight:800}.stat-label{font-size:10px;color:#999}.informe-area{border-left:3px solid #1976D2;padding:6px 12px;margin-bottom:8px;background:#fafcff}.informe-area h4{font-size:12px;margin-bottom:4px}.nota-badge{border-radius:3px;padding:1px 4px;font-weight:700;font-size:10px}.nota-alta{background:#E8F5E9;color:#2E7D32}.nota-media{background:#FFF3E0;color:#E65100}.nota-baja{background:#FFEBEE;color:#C62828}.nota-excelente{background:#E3F2FD;color:#1565C0}table{border-collapse:collapse;width:100%}th,td{padding:3px 6px;border:1px solid #ddd;font-size:11px}th{background:#f5f5f5}@media print{body{padding:10px}}</style></head><body>${content}</body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+function exportarInformeExcel(){
+  const alId=parseInt(document.getElementById('infAlumno').value);
+  const al=alumnos.find(a=>a.id===alId);if(!al)return;
+  const wb=XLSX.utils.book_new();
+  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const rows=[["INFORME DE RENDIMIENTO"],["Alumno:",al.nombre],["Grado:",al.grado],["Año:","2026"],[""]];
+  mats.forEach(mat=>{
+    rows.push([mat]);
+    PERIODOS.forEach(p=>{
+      const evs=evalsDeMateria(mat,al.grado,p);
+      if(!evs.length)return;
+      rows.push(["",p,"Fecha","Tipo","Contenido","AP","Nota"]);
+      evs.forEach(e=>{
+        const nota=e.notas[al.id];const aus=(e.ausentes||[]).includes(al.id);
+        rows.push(["","",e.fecha,e.subtipo,e.descripcion||"",e.ap||"",aus?"AUS":(nota??"")]);
+      });
+      rows.push(["","","Promedio período:","","","",formatN(promedioAlumnoMatPer(al.id,mat,al.grado,p))]);
+    });
+    rows.push(["","Promedio anual:","","","","",formatN(promedioAlumnoMatAnual(al.id,mat,al.grado))]);
+    rows.push([""]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:30},{wch:18},{wch:12},{wch:14},{wch:24},{wch:18},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,"Informe");
+  XLSX.writeFile(wb,`Informe_${al.nombre.replace(/[^a-zA-Z]/g,"_")}_${al.grado}.xlsx`);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CHAT IA
+// ════════════════════════════════════════════════════════════════════════════
+function setSug(t){document.getElementById('chatInput').value=t;}
+async function enviarChat(){
+  const inp=document.getElementById('chatInput');const msg=inp.value.trim();
+  if(!msg||chatLoading)return;inp.value='';chatLoading=true;document.getElementById('btnEnviar').disabled=true;
+  appendMsg('user',msg);
+  const mats=Object.keys(aps).filter(m=>m!=='Convivencia');
+  const sys=`Sos un asistente docente del nivel primario de Mendoza (Res. 1949-DGE-22/Res. 3556-DGE-2019). Notas de 0 a 10 con decimales.
+Alumnos: ${alumnos.slice(0,30).map(a=>`ID:${a.id} ${a.nombre}(${a.grado})`).join(" | ")}
+Evaluaciones recientes: ${evaluaciones.slice(-10).map(e=>`${e.materia}/${e.periodo}/${e.subtipo}(${e.fecha})`).join(" | ")||"Ninguna"}
+Llamados: ${Object.entries(llamados).filter(([,n])=>n>0).map(([id,n])=>`ID${id}:${n}`).join(" | ")||"Ninguno"}
+Materias: ${mats.join(", ")}
+Períodos: ${PERIODOS.join(", ")}
+Si el docente pide cargar una nota, respondé confirmando y agregá al final: ACCION_JSON: {"tipo":"cargar_nota","datos":{"alumnoId":X,"materia":"...","periodo":"...","nota":N}}
+Si pide registrar llamado: ACCION_JSON: {"tipo":"registrar_llamado","datos":{"alumnoId":X,"motivo":"..."}}
+Respondé en español, breve y claro.`;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:msg}]})});
     const data=await res.json();
     let texto=data.content?.map(b=>b.text||"").join("")||"Sin respuesta.";
     const match=texto.match(/ACCION_JSON:\s*(\{[\s\S]*?\})/);
     if(match){try{ejecutarAccion(JSON.parse(match[1]));}catch{}}
     texto=texto.replace(/ACCION_JSON:[\s\S]*$/,"").trim();
-    appendMsg("bot",texto);
-  }catch{appendMsg("bot","Error de conexión. Verificá tu red.");}
-
-  chatLoading=false;
-  document.getElementById("btnEnviar").disabled=false;
+    appendMsg('bot',texto);
+  }catch{appendMsg('bot','Error de conexión.');}
+  chatLoading=false;document.getElementById('btnEnviar').disabled=false;
 }
-
 function appendMsg(tipo,texto){
-  const box=document.getElementById("chatMsgs");
-  const div=document.createElement("div");
-  div.className=tipo==="usuario"?"msg-user":"msg-bot";
-  if(tipo==="bot")div.innerHTML=`<div class="msg-label">🤖 Asistente GEI</div><div class="bubble-bot">${escHtml(texto)}</div>`;
-  else div.innerHTML=`<div class="bubble-user">${escHtml(texto)}</div>`;
-  box.appendChild(div);
-  box.scrollTop=box.scrollHeight;
+  const box=document.getElementById('chatMsgs');const div=document.createElement('div');
+  div.className=tipo==='user'?'msg-user':'msg-bot';
+  div.innerHTML=tipo==='bot'?`<div class="msg-label">🤖 Asistente</div><div class="bubble-bot">${escH(texto)}</div>`:`<div class="bubble-user">${escH(texto)}</div>`;
+  box.appendChild(div);box.scrollTop=box.scrollHeight;
 }
-
-function escHtml(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-
 function ejecutarAccion(a){
   if(a.tipo==="cargar_nota"){
-    const{alumnoId,area,periodo,aprendizaje,nota}=a.datos||{};
-    if(alumnoId&&area&&periodo&&aprendizaje&&nota){
-      calif[`${alumnoId}__${area}__${periodo}__${aprendizaje}`]=nota;
-      guardarTodo();
-      if(tabActual==="planilla")renderPlanilla();
-    }
+    const{alumnoId,materia,periodo,nota}=a.datos||{};
+    if(!alumnoId||!materia||!periodo||nota===undefined)return;
+    // Create a "cierre" evaluation with the note
+    let ev=evaluaciones.find(e=>e.materia===materia&&e.grado===alumnos.find(al=>al.id===alumnoId)?.grado&&e.periodo===periodo&&e.tipo==='cierre');
+    if(!ev){ev={id:nextEvalId++,materia,grado:alumnos.find(al=>al.id===alumnoId)?.grado||gradoActual,periodo,tipo:'cierre',subtipo:'Cierre de período',descripcion:'Nota cargada por asistente IA',fecha:new Date().toISOString().split('T')[0],ap:'',notas:{},ausentes:[]};evaluaciones.push(ev);}
+    ev.notas[alumnoId]=round2(parseFloat(nota));
+    guardarTodo();
   }
   if(a.tipo==="registrar_llamado"){
-    const{alumnoId}=a.datos||{};
-    if(alumnoId){llamados[alumnoId]=(llamados[alumnoId]||0)+1;guardarTodo();if(tabActual==="alumnos")renderAlumnos();}
+    const{alumnoId}=a.datos||{};if(alumnoId){llamados[alumnoId]=(llamados[alumnoId]||0)+1;guardarTodo();}
   }
 }
 
-// ─── PLANILLA ─────────────────────────────────────────────────────────────────
-function initSelectArea(){
-  const sel=document.getElementById("pArea");
-  const cur=sel.value;
-  sel.innerHTML=Object.keys(aps).map(a=>`<option ${a===cur?"selected":""}>${a}</option>`).join("");
-}
-
-function setModoP(m){
-  modoP=m;
-  document.getElementById("btnGrado").classList.toggle("active",m==="grado");
-  document.getElementById("btnAlumno").classList.toggle("active",m==="alumno");
-  document.getElementById("pAlumnoSel").classList.toggle("hidden",m==="grado");
-  if(m==="alumno")fillAlumnoSel();
-  renderPlanilla();
-}
-
-function fillAlumnoSel(){
-  const grado=document.getElementById("pGrado").value;
-  const sel=document.getElementById("pAlumnoSel");
-  const fils=alumnos.filter(a=>a.grado===grado);
-  sel.innerHTML=`<option value="">— Seleccioná —</option>`+fils.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join("");
-  renderPlanilla();
-}
-
-function renderPlanilla(){
-  const grado=document.getElementById("pGrado").value;
-  const area=document.getElementById("pArea").value||Object.keys(aps)[0];
-  const periodo=document.getElementById("pPeriodo").value;
-  const apsl=aps[area]||[];
-  let fils=alumnos.filter(a=>a.grado===grado);
-  if(modoP==="alumno"){const id=document.getElementById("pAlumnoSel").value;if(id)fils=fils.filter(a=>a.id==id);}
-
-  let html=`<div style="background:#1A3A5C;color:#fff;padding:9px 14px;font-weight:700;font-size:13px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between">
-    <span>${area} · ${periodo} · ${grado} Grado</span><span style="opacity:.7;font-size:11px;font-weight:400">Sistema GEI — Mendoza</span>
-  </div>
-  <div class="table-wrap" style="border:1px solid #DDE3EC;border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
-  <table><thead><tr>
-    <th class="left" style="min-width:150px;background:rgba(26,58,92,.05)">Alumno/a</th>
-    ${apsl.map(ap=>`<th style="min-width:90px;background:rgba(26,58,92,.05)">${ap}</th>`).join("")}
-    <th style="min-width:75px;color:#2E6DA4;background:rgba(26,58,92,.05)">Período</th>
-    <th style="color:#C0392B;background:rgba(26,58,92,.05)">Convivencia</th>
-    <th style="color:#8E44AD;background:rgba(26,58,92,.05)">Anual</th>
-  </tr></thead><tbody>`;
-
-  if(!fils.length){html+=`<tr><td colspan="${apsl.length+4}" class="empty">Sin alumnos en ${grado} grado.</td></tr>`;}
-  fils.forEach(al=>{
-    const pp=promArea(al.id,area,periodo), pa=promAnual(al.id,area);
-    const ll=llamados[al.id]||0, cv=convivencia(ll);
-    html+=`<tr>
-      <td class="left">${escHtml(al.nombre)}</td>
-      ${apsl.map(ap=>{
-        const key=`${al.id}__${area}__${periodo}__${ap}`,n=calif[key]||"";
-        const cls=n?`gei gei-${n}`:"gei";
-        return`<td><select class="${cls}" onchange="setNota('${key}',this.value,this)" data-key="${key}">
-          <option value="">—</option>${Object.keys(GEI).map(k=>`<option value="${k}"${n===k?" selected":""}>${k}</option>`).join("")}
-        </select></td>`;
-      }).join("")}
-      <td>${pp?badge(pp):"<span style='color:#DDE3EC'>—</span>"}</td>
-      <td><div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-        ${badge(cv)}
-        <div class="llamados-ctrl">
-          <button class="btn-pm" onclick="cambiarLlamado(${al.id},-1)">➖</button>
-          <span style="font-size:11px;font-weight:700;color:${ll>0?"#C0392B":"#6B7C93"}">${ll}</span>
-          <button class="btn-pm" onclick="cambiarLlamado(${al.id},1)">➕</button>
-        </div>
-      </div></td>
-      <td>${pa?badge(pa):"<span style='color:#DDE3EC'>—</span>"}</td>
-    </tr>`;
-  });
-
-  html+=`</tbody></table></div>`;
-  document.getElementById("planillaWrap").innerHTML=html;
-
-  // Leyenda
-  document.getElementById("leyendaP").innerHTML=
-    `<span style="font-size:11px;color:#6B7C93;font-weight:600;align-self:center">Escala GEI:</span>`+
-    Object.entries(GEI).map(([k,v])=>`<span class="badge badge-${k}">${k} = ${v.label}</span>`).join("");
-}
-
-function setNota(key,val,sel){
-  calif[key]=val;
-  sel.className=val?`gei gei-${val}`:"gei";
-  guardarTodo();
-}
-
-function cambiarLlamado(id,delta){
-  llamados[id]=Math.max(0,(llamados[id]||0)+delta);
-  guardarTodo();
-  renderPlanilla();
-}
-
-// ─── CIERRE ───────────────────────────────────────────────────────────────────
-function renderCierre(){
-  const grado=document.getElementById("cGrado").value;
-  const periodo=document.getElementById("cPeriodo").value;
-  const areas=Object.keys(aps);
-  const fils=alumnos.filter(a=>a.grado===grado);
-
-  let html=`<div class="thead-verde" style="border-radius:10px 10px 0 0">${grado} Grado · ${periodo} — Resumen GEI</div>
-  <div class="table-wrap" style="border:1px solid #DDE3EC;border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
-  <table><thead><tr>
-    <th class="left" style="min-width:170px">Alumno/a</th>
-    ${areas.map(a=>`<th style="font-size:11px">${a}</th>`).join("")}
-  </tr></thead><tbody>`;
-
-  if(!fils.length){html+=`<tr><td colspan="${areas.length+1}" class="empty">Sin alumnos en ${grado} grado.</td></tr>`;}
-  fils.forEach(al=>{
-    html+=`<tr><td class="left">${escHtml(al.nombre)}</td>
-    ${areas.map(area=>{
-      const p=area==="Convivencia"?convivencia(llamados[al.id]||0):promArea(al.id,area,periodo);
-      return`<td>${badgeSolo(p)}</td>`;
-    }).join("")}</tr>`;
-  });
-  html+=`</tbody></table></div>`;
-  document.getElementById("cierreWrap").innerHTML=html;
-}
-
-// ─── ALUMNOS ──────────────────────────────────────────────────────────────────
-function renderAlumnos(){
-  const filtro=document.getElementById("filtroGrado").value;
-  const fils=filtro==="Todos"?alumnos:alumnos.filter(a=>a.grado===filtro);
-  document.getElementById("alumnosTitle").textContent=`👨‍🎓 Alumnos (${fils.length})`;
-  let html="";
-  if(!fils.length){html=`<div class="empty">Sin alumnos. Agregá el primero arriba.</div>`;}
-  fils.forEach((al,i)=>{
-    const ll=llamados[al.id]||0, cv=convivencia(ll);
-    html+=`<div class="alumno-row" style="background:${i%2?"#F5F7FA":"#fff"}">
-      <div class="alumno-nombre"><strong>${escHtml(al.nombre)}</strong><span>${al.grado} Grado · ID ${al.id}</span></div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:11px;color:#C0392B;font-weight:600">⚠️ ${ll}</span>${badge(cv)}
-      </div>
-      <div class="row">
-        <button class="btn btn-amarillo btn-sm" onclick="addLlamado(${al.id})">+ Llamado</button>
-        <button class="btn btn-rojo-o btn-sm" onclick="eliminarAlumno(${al.id})">Eliminar</button>
-      </div>
-    </div>`;
-  });
-  document.getElementById("alumnosLista").innerHTML=html;
-  updateHeaderStats();
-}
-
-function agregarAlumno(){
-  const nombre=document.getElementById("nuevoNombre").value.trim();
-  const grado=document.getElementById("nuevoGrado").value;
-  if(!nombre)return;
-  alumnos.push({id:nextId++,nombre,grado});
-  document.getElementById("nuevoNombre").value="";
-  guardarTodo(); renderAlumnos();
-}
-
-function eliminarAlumno(id){
-  if(!confirm("¿Eliminar este alumno?"))return;
-  alumnos=alumnos.filter(a=>a.id!==id);
-  guardarTodo(); renderAlumnos();
-}
-
-function addLlamado(id){
-  llamados[id]=(llamados[id]||0)+1;
-  guardarTodo(); renderAlumnos();
-}
-
-// ─── APS ──────────────────────────────────────────────────────────────────────
-function renderAPs(){
-  apsLocal=JSON.parse(JSON.stringify(aps));
-  renderAreaList();
-  renderAPPanel();
-}
-
+// ════════════════════════════════════════════════════════════════════════════
+// CONFIG / APS
+// ════════════════════════════════════════════════════════════════════════════
 function renderAreaList(){
-  const areas=Object.keys(apsLocal);
-  document.getElementById("areaList").innerHTML=areas.map(a=>`
-    <div class="area-item${a===areaEdActual?" active":""}" onclick="selArea('${escAtr(a)}')">
-      <span style="font-size:12px;font-weight:${a===areaEdActual?700:400};color:${a===areaEdActual?"#1A3A5C":"#1C2B3A"}">${escHtml(a)}</span>
-      <span class="area-badge">${(apsLocal[a]||[]).length}</span>
-    </div>`).join("");
+  document.getElementById('areaListWrap').innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text3);padding:4px 8px;margin-bottom:4px">MATERIAS</div>`+
+    Object.keys(apsLocal).map(a=>`<div class="area-item${a===areaEdActual?' active':''}" onclick="areaEdActual='${a.replace(/'/g,"\\'")}';renderAreaList();renderAPPanel();">
+      <span>${escH(a)}</span><span style="font-size:10px;color:var(--text3);background:#f5f5f5;padding:1px 5px;border-radius:4px">${(apsLocal[a]||[]).length}</span></div>`).join('');
 }
-
-function selArea(a){
-  areaEdActual=a;
-  renderAreaList();
-  renderAPPanel();
-}
-
 function renderAPPanel(){
-  const a=areaEdActual, lista=apsLocal[a]||[];
-  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <div style="font-weight:700;color:#1A3A5C;font-size:13px">${escHtml(a)}</div>
-    <button class="btn btn-rojo-o btn-sm" onclick="eliminarArea('${escAtr(a)}')">Eliminar área</button>
-  </div>`;
-  if(!lista.length)html+=`<div style="color:#6B7C93;font-size:12px;font-style:italic;margin-bottom:12px">Sin aprendizajes. Agregá el primero abajo.</div>`;
-  lista.forEach((ap,i)=>{html+=`<div class="ap-item"><span>${escHtml(ap)}</span><button class="btn-x" onclick="eliminarAP('${escAtr(a)}',${i})">✕</button></div>`;});
-  html+=`<div class="row" style="margin-top:8px">
-    <input class="inp" id="nuevoAP" placeholder="Nuevo aprendizaje prioritario..." style="flex:1" onkeydown="if(event.key==='Enter')agregarAP()">
-    <button class="btn btn-verde btn-sm" onclick="agregarAP()">Agregar AP</button>
-  </div>`;
-  document.getElementById("apPanel").innerHTML=html;
+  const a=areaEdActual,lista=apsLocal[a]||[];
+  let html=`<div style="display:flex;justify-content:space-between;margin-bottom:12px"><strong>${escH(a)}</strong><button class="btn btn-red btn-xs" onclick="if(confirm('¿Eliminar?')){delete apsLocal['${a.replace(/'/g,"\\'")}'];areaEdActual=Object.keys(apsLocal)[0]||'';renderAreaList();renderAPPanel();}">Eliminar</button></div>`;
+  if(!lista.length)html+=`<p style="color:var(--text3);font-size:12px;font-style:italic">Sin aprendizajes prioritarios.</p>`;
+  lista.forEach((ap,i)=>{html+=`<div class="ap-item"><span>${escH(ap)}</span><button style="background:none;border:none;cursor:pointer;color:var(--red)" onclick="apsLocal['${a.replace(/'/g,"\\'")}'].splice(${i},1);renderAreaList();renderAPPanel();">✕</button></div>`;});
+  html+=`<div class="row" style="margin-top:8px"><input class="inp" id="nuevoAP" placeholder="Nuevo AP..." style="flex:1" onkeydown="if(event.key==='Enter'){apsLocal['${a.replace(/'/g,"\\'")}'].push(this.value.trim());this.value='';renderAreaList();renderAPPanel();}"><button class="btn btn-green btn-xs" onclick="const v=document.getElementById('nuevoAP').value.trim();if(v){apsLocal['${a.replace(/'/g,"\\'")}'].push(v);document.getElementById('nuevoAP').value='';renderAreaList();renderAPPanel();}">+ Agregar</button></div>`;
+  document.getElementById('apPanel').innerHTML=html;
 }
+function agregarArea(){const v=document.getElementById('nuevaArea').value.trim();if(!v||apsLocal[v])return;apsLocal[v]=[];areaEdActual=v;document.getElementById('nuevaArea').value='';renderAreaList();renderAPPanel();}
+function guardarAPs(){aps=JSON.parse(JSON.stringify(apsLocal));sv('aps',aps);const b=document.getElementById('btnGuardarAPs');b.textContent='✅ Guardado';setTimeout(()=>b.textContent='💾 Guardar cambios',2000);}
 
-function agregarAP(){
-  const v=document.getElementById("nuevoAP").value.trim();
-  if(!v)return;
-  if(!apsLocal[areaEdActual])apsLocal[areaEdActual]=[];
-  apsLocal[areaEdActual].push(v);
-  renderAreaList(); renderAPPanel();
+// ════════════════════════════════════════════════════════════════════════════
+// IMPORTAR EXCEL
+// ════════════════════════════════════════════════════════════════════════════
+function importarExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array"});
+      const sn=wb.SheetNames.find(n=>/alumno|resumen/i.test(n))||wb.SheetNames[0];
+      const ws=wb.Sheets[sn];
+      const grid=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+      if(!grid.length){showMsg("❌ Hoja vacía.","error");return;}
+      const fc=grid.findIndex(r=>/^curso\s*:/i.test(String(r[0]||"")));
+      const fn=grid.findIndex(r=>/nombre\s*y\s*apellido/i.test(String(r[0]||"")));
+      if(fc>=0&&fn>=0) importDGE(grid,fc,fn);
+      else importSimple(grid);
+    }catch(err){showMsg("❌ "+err.message,"error");}
+    input.value="";
+  };reader.readAsArrayBuffer(file);
 }
-
-function eliminarAP(area,idx){
-  apsLocal[area].splice(idx,1);
-  renderAreaList(); renderAPPanel();
-}
-
-function agregarArea(){
-  const v=document.getElementById("nuevaArea").value.trim();
-  if(!v||apsLocal[v])return;
-  apsLocal[v]=[]; areaEdActual=v;
-  document.getElementById("nuevaArea").value="";
-  renderAreaList(); renderAPPanel();
-}
-
-function eliminarArea(a){
-  if(!confirm(`¿Eliminar el área "${a}"?`))return;
-  delete apsLocal[a];
-  areaEdActual=Object.keys(apsLocal)[0]||"";
-  renderAreaList(); renderAPPanel();
-}
-
-function guardarAPs(){
-  aps=JSON.parse(JSON.stringify(apsLocal));
-  lsSave("aps",aps);
-  const btn=document.getElementById("btnGuardarAPs");
-  btn.textContent="✅ Guardado"; btn.className="btn btn-verde";
-  setTimeout(()=>{btn.textContent="💾 Guardar";btn.className="btn btn-azul";},2000);
-  initSelectArea();
-}
-
-function escAtr(s){return s.replace(/'/g,"\\'");}
-
-// ─── EXPORTAR EXCEL ───────────────────────────────────────────────────────────
-function exportExcel(){
-  const grado=document.getElementById("pGrado").value;
-  const periodo=document.getElementById("pPeriodo").value;
-  _exportExcelCore(grado,periodo);
-}
-function exportExcelCierre(){
-  const grado=document.getElementById("cGrado").value;
-  const periodo=document.getElementById("cPeriodo").value;
-  _exportExcelCore(grado,periodo);
-}
-function _exportExcelCore(grado,periodo){
-  const wb=XLSX.utils.book_new();
-  Object.keys(aps).forEach(area=>{
-    const fils=alumnos.filter(a=>a.grado===grado);
-    const apsl=aps[area]||[];
-    const hdr=["Alumno/a",...apsl,"Promedio Período",area==="Convivencia"?"Llamados":""];
-    const rows=fils.map(al=>{
-      const ns=apsl.map(ap=>calif[`${al.id}__${area}__${periodo}__${ap}`]||"");
-      const p=area==="Convivencia"?convivencia(llamados[al.id]||0):promedioGEI(ns.filter(Boolean));
-      return[al.nombre,...ns,p||"—",area==="Convivencia"?(llamados[al.id]||0):""];
+function importDGE(grid,fc,fn){
+  const ct=String(grid[fc][0]||"");const mg=ct.match(/(\d+)\s*°/);
+  if(!mg){showMsg("❌ No se detectó grado.","error");return;}
+  const grado=`${mg[1]}°`;
+  const fp=grid[fc],fm=grid[fn];const ci=[];let pa="";
+  for(let c=1;c<fm.length;c++){const pt=String(fp[c]||"").trim();if(pt)pa=pt;const mat=String(fm[c]||"").trim();if(mat)ci.push({col:c,periodo:pa,materia:mat});}
+  if(!ci.length){showMsg("❌ Sin columnas.","error");return;}
+  const np=p=>{const n=p.trim().toLowerCase();return PERIODOS.find(pp=>pp.toLowerCase()===n)||p.trim();};
+  let nv=0,ac=0,ni=0;const mn=new Set();
+  for(let r=fn+1;r<grid.length;r++){
+    const f=grid[r];const nm=String(f[0]||"").trim();
+    if(!nm)continue;if(/^(aprobados|desaprobados|%|total)/i.test(nm))break;
+    let al=alumnos.find(a=>a.nombre.toLowerCase()===nm.toLowerCase()&&a.grado===grado);
+    if(!al){al={id:nextId++,nombre:nm,grado};alumnos.push(al);nv++;}else ac++;
+    ci.forEach(({col,periodo,materia})=>{
+      const raw=f[col];if(raw===""||raw===undefined||raw===null)return;
+      const num=parseFloat(String(raw).replace(",","."));if(isNaN(num))return;
+      if(!aps[materia]){aps[materia]=[];mn.add(materia);}
+      const per=np(periodo);
+      // Create cierre eval for imported data
+      let ev=evaluaciones.find(e=>e.materia===materia&&e.grado===grado&&e.periodo===per&&e.tipo==='cierre'&&e.descripcion==='Importado desde Excel');
+      if(!ev){ev={id:nextEvalId++,materia,grado,periodo:per,tipo:'cierre',subtipo:'Cierre de período',descripcion:'Importado desde Excel',fecha:new Date().toISOString().split('T')[0],ap:'',notas:{},ausentes:[]};evaluaciones.push(ev);}
+      ev.notas[al.id]=round2(num);ni++;
     });
-    const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
-    ws["!cols"]=[{wch:24},...apsl.map(()=>({wch:14})),{wch:14},{wch:10}];
-    XLSX.utils.book_append_sheet(wb,ws,area.substring(0,31));
-  });
-  const fils2=alumnos.filter(a=>a.grado===grado);
-  const areas=Object.keys(aps);
-  const ws2=XLSX.utils.aoa_to_sheet([["Alumno/a",...areas],...fils2.map(al=>[
-    al.nombre,...areas.map(area=>{
-      if(area==="Convivencia")return convivencia(llamados[al.id]||0);
-      const ns=(aps[area]||[]).map(ap=>calif[`${al.id}__${area}__${periodo}__${ap}`]||"").filter(Boolean);
-      return promedioGEI(ns)||"—";
-    })
-  ])]);
-  ws2["!cols"]=[{wch:24},...areas.map(()=>({wch:12}))];
-  XLSX.utils.book_append_sheet(wb,ws2,"Resumen GEI");
-  XLSX.writeFile(wb,`GEI_${grado}_${periodo.replace(/[°\s]/g,"")}.xlsx`);
+  }
+  gradoActual=grado;document.getElementById('gGrado').value=grado;
+  guardarTodo();renderAlumnos();renderCursadas();
+  let msg=`✅ DGE (${grado}): ${nv} nuevo(s), ${ac} existente(s), ${ni} notas.`;
+  if(mn.size)msg+=` Materias: ${[...mn].join(', ')}`;
+  showMsg(msg,"ok");
 }
+function importSimple(grid){
+  const hd=grid[0]||[];
+  const cn=hd.findIndex(h=>/nombre|alumno|apellido/i.test(String(h)));
+  const cg=hd.findIndex(h=>/grado|año|curso/i.test(String(h)));
 
-// ─── EXPORTAR PDF ─────────────────────────────────────────────────────────────
-function exportPDF(){
-  const grado=document.getElementById("pGrado").value;
-  const periodo=document.getElementById("pPeriodo").value;
-  _exportPDFCore(grado,periodo);
-}
-function exportPDFCierre(){
-  const grado=document.getElementById("cGrado").value;
-  const periodo=document.getElementById("cPeriodo").value;
-  _exportPDFCore(grado,periodo);
-}
-function _exportPDFCore(grado,periodo){
-  const fils=alumnos.filter(a=>a.grado===grado);
-  const areas=Object.keys(aps);
-  const filas=fils.map(al=>`<tr>
-    <td style="padding:6px 10px;font-weight:600;border:1px solid #ddd">${al.nombre}</td>
-    ${areas.map(area=>{
-      const val=area==="Convivencia"?convivencia(llamados[al.id]||0):(()=>{
-        const ns=(aps[area]||[]).map(ap=>calif[`${al.id}__${area}__${periodo}__${ap}`]||"").filter(Boolean);
-        return promedioGEI(ns)||"—";
-      })();
-      const col=GEI[val]?.color||"#999";
-      return`<td style="padding:6px 8px;text-align:center;border:1px solid #ddd"><span style="background:${col}22;color:${col};border:1px solid ${col}55;border-radius:4px;padding:2px 6px;font-weight:700;font-size:12px">${val}</span></td>`;
-    }).join("")}
-  </tr>`).join("");
-  const w=window.open("","_blank");
-  if(!w){alert("Permitir ventanas emergentes para exportar PDF");return;}
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>GEI ${grado} ${periodo}</title>
-  <style>body{font-family:Arial,sans-serif;padding:30px;color:#1C2B3A}h1{color:#1A3A5C;font-size:18px}h2{color:#2E6DA4;font-size:14px;font-weight:normal;margin-top:0}table{border-collapse:collapse;width:100%;margin-top:16px;font-size:12px}th{background:#1A3A5C;color:#fff;padding:8px;text-align:center;border:1px solid #ddd;font-size:11px}th:first-child{text-align:left}.ley{margin-top:18px;font-size:11px;color:#666;border-top:1px solid #ddd;padding-top:10px}.firma{margin-top:40px;display:flex;gap:60px}.firma div{border-top:1px solid #333;padding-top:6px;font-size:11px;width:200px}@media print{body{padding:15px}}</style>
-  </head><body>
-  <h1>📚 Informe de Calificaciones — Sistema GEI</h1>
-  <h2>Provincia de Mendoza · Nivel Primario · ${grado} Grado · ${periodo}</h2>
-  <table><thead><tr><th style="text-align:left;min-width:180px">Alumno/a</th>${areas.map(a=>`<th>${a}</th>`).join("")}</tr></thead>
-  <tbody>${filas}</tbody></table>
-  <div class="ley"><strong>Escala GEI:</strong> EP=En Proceso · EA=En Avance · SA=Satisfactorio · NS=Notable Superación<br>Convivencia: 0 llamados→SA · 1→EA · 2+→EP</div>
-  <div class="firma"><div>Firma y sello docente</div><div>Firma directivo</div><div>Fecha: ___/___/______</div></div>
-  </body></html>`);
-  w.document.close(); setTimeout(()=>w.print(),600);
-}
-
-// ─── IMPORTAR EXCEL ───────────────────────────────────────────────────────────
-function importarExcel(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const wb = XLSX.read(e.target.result, {type:"array"});
-
-      // Buscar hoja de alumnos (primera hoja, o la que se llame "Alumnos")
-      const sheetName = wb.SheetNames.includes("Alumnos") ? "Alumnos" : wb.SheetNames[0];
-      const ws = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
-
-      if (!rows.length) { showImportMsg("❌ La hoja está vacía.", "error"); return; }
-
-      // Detectar columnas
-      const keys = Object.keys(rows[0]);
-      const colNombre = keys.find(k => /nombre|alumno|apellido/i.test(k)) || keys[0];
-      const colGrado  = keys.find(k => /grado|año|curso/i.test(k)) || keys[1];
-
-      if (!colNombre) { showImportMsg("❌ No se encontró columna 'Nombre'.", "error"); return; }
-
-      let nuevos = 0, actualizados = 0, notasImportadas = 0;
-
-      rows.forEach(row => {
-        const nombre = String(row[colNombre] || "").trim();
-        const gradoRaw = String(row[colGrado] || "").trim();
-        if (!nombre) return;
-
-        // Normalizar grado: "3", "3°", "Tercero" → "3°"
-        const gradoNum = gradoRaw.replace(/[°\s]/g,"").replace(/[a-záéíóú]+/gi,"");
-        const grado = GRADOS.find(g => g.replace("°","") === gradoNum) || gradoRaw || "3°";
-
-        // Buscar si ya existe
-        let al = alumnos.find(a => a.nombre.toLowerCase() === nombre.toLowerCase());
-        if (!al) {
-          al = { id: nextId++, nombre, grado };
-          alumnos.push(al);
-          nuevos++;
-        } else {
-          actualizados++;
-        }
-
-        // Importar columnas de calificaciones: Area__Periodo__AP
-        keys.forEach(k => {
-          if (k === colNombre || k === colGrado) return;
-          const partes = k.split("__");
-          if (partes.length === 3) {
-            const [area, periodo, ap] = partes;
-            const val = String(row[k] || "").trim().toUpperCase();
-            if (GEI[val]) {
-              calif[`${al.id}__${area}__${periodo}__${ap}`] = val;
-              notasImportadas++;
-            }
-          }
-          // Columna llamados
-          if (/llamado/i.test(k)) {
-            const n = parseInt(row[k]) || 0;
-            if (n > 0) llamados[al.id] = n;
-          }
-        });
-      });
-
-      guardarTodo();
-      renderAlumnos();
-      let msg = `✅ Importación completada: ${nuevos} alumno(s) nuevo(s)`;
-      if (actualizados) msg += `, ${actualizados} ya existía(n)`;
-      if (notasImportadas) msg += `, ${notasImportadas} calificaciones importadas`;
-      msg += ".";
-      showImportMsg(msg, "ok");
-    } catch(err) {
-      showImportMsg("❌ Error al leer el archivo: " + err.message, "error");
+  // Caso especial: solo una columna (lista de nombres sin encabezado claro)
+  if(hd.length===1||(cn<0&&cg<0)){
+    // Asumir que es una lista plana de nombres, primera fila puede ser header o nombre
+    let startRow=0;
+    if(/nombre|alumno|apellido|listado/i.test(String(hd[0]||"")))startRow=1;
+    let nv=0;
+    for(let r=startRow;r<grid.length;r++){
+      const nm=String(grid[r][0]||"").trim();
+      if(!nm)continue;
+      if(alumnos.find(a=>a.nombre.toLowerCase()===nm.toLowerCase()&&a.grado===gradoAlumnos))continue;
+      alumnos.push({id:nextId++,nombre:nm,grado:gradoAlumnos});nv++;
     }
-    input.value = ""; // resetear input
-  };
-  reader.readAsArrayBuffer(file);
-}
+    guardarTodo();renderAlumnos();
+    showMsg(`✅ ${nv} alumno(s) cargado(s) en ${gradoAlumnos} Grado.`,"ok");
+    return;
+  }
 
-function showImportMsg(msg, tipo) {
-  const el = document.getElementById("importMsg");
-  el.style.display = "block";
-  el.style.color = tipo === "ok" ? "#27AE60" : "#C0392B";
-  el.style.background = tipo === "ok" ? "rgba(39,174,96,.08)" : "rgba(192,57,43,.08)";
-  el.style.border = `1px solid ${tipo==="ok"?"#27AE60":"#C0392B"}`;
-  el.style.borderRadius = "8px";
-  el.style.padding = "8px 12px";
-  el.style.fontWeight = "600";
-  el.textContent = msg;
-  setTimeout(() => { el.style.display = "none"; }, 6000);
-}
-
-function descargarPlantilla() {
-  const wb = XLSX.utils.book_new();
-
-  // Hoja Alumnos con columnas de ejemplo
-  const areas = Object.keys(aps);
-  const periodos = ["1° Período","2° Período","3° Período"];
-
-  // Construir encabezados: Nombre, Grado, luego Area__Periodo__AP por cada combinación
-  const headers = ["Nombre", "Grado", "Llamados"];
-  areas.forEach(area => {
-    if (area === "Convivencia") return; // convivencia es automática
-    periodos.forEach(periodo => {
-      (aps[area] || []).forEach(ap => {
-        headers.push(`${area}__${periodo}__${ap}`);
-      });
+  if(cn<0){showMsg("❌ Sin columna 'Nombre'.","error");return;}
+  let nv=0,ac=0,ni=0;
+  for(let r=1;r<grid.length;r++){
+    const f=grid[r];const nm=String(f[cn]||"").trim();if(!nm)continue;
+    const gr=cg>=0?String(f[cg]||"").trim():"";
+    const gn=gr.replace(/[°\s]/g,"").replace(/[a-záéíóú]+/gi,"");
+    const grado=gr?GRADOS.find(g=>g.replace("°","")=== gn)||gr:gradoAlumnos;
+    let al=alumnos.find(a=>a.nombre.toLowerCase()===nm.toLowerCase()&&a.grado===grado);
+    if(!al){al={id:nextId++,nombre:nm,grado};alumnos.push(al);nv++;}else ac++;
+    hd.forEach((h,c)=>{
+      if(c===cn||c===cg)return;
+      if(/llamado/i.test(String(h))){const n=parseInt(f[c])||0;if(n>0)llamados[al.id]=n;}
     });
-  });
-
-  // Filas de ejemplo
-  const ejemplos = [
-    ["García, Lucía", "3°", 0, ...headers.slice(3).map((h,i) => i===0?"SA":"")],
-    ["Pérez, Mateo",  "3°", 1, ...headers.slice(3).map(()=>"")],
-    ["López, Ana",    "4°", 0, ...headers.slice(3).map(()=>"")],
-  ];
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...ejemplos]);
-  ws["!cols"] = [
-    {wch:22}, {wch:8}, {wch:10},
-    ...headers.slice(3).map(() => ({wch:20}))
-  ];
-
-  // Hoja de instrucciones
-  const instrucciones = [
-    ["INSTRUCCIONES DE IMPORTACIÓN"],
-    [""],
-    ["Columnas obligatorias:"],
-    ["  Nombre   → Apellido y nombre del alumno (ej: García, Lucía)"],
-    ["  Grado    → Grado con ° (ej: 3°)  o solo número (ej: 3)"],
-    [""],
-    ["Columna opcional:"],
-    ["  Llamados → Número de llamados de atención (0, 1, 2...)"],
-    [""],
-    ["Columnas de calificaciones (opcionales):"],
-    ["  Formato: Area__Periodo__AprendizajePrioritario"],
-    ["  Ejemplo: Matemática__1° Período__Geometría"],
-    ["  Valores válidos: EP, EA, SA, NS"],
-    [""],
-    ["Períodos válidos:"],
-    ["  1° Período, 2° Período, 3° Período, Cierre Anual"],
-    [""],
-    ["Áreas disponibles:"],
-    ...Object.keys(aps).map(a => [`  ${a}: ${(aps[a]||[]).join(", ")}`]),
-  ];
-  const wsI = XLSX.utils.aoa_to_sheet(instrucciones);
-  wsI["!cols"] = [{wch:80}];
-
-  XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
-  XLSX.utils.book_append_sheet(wb, wsI, "Instrucciones");
-  XLSX.writeFile(wb, "Plantilla_Importacion_GEI.xlsx");
+  }
+  guardarTodo();renderAlumnos();
+  showMsg(`✅ ${nv} nuevo(s)${ac?`, ${ac} existente(s)`:''} en ${gradoAlumnos} Grado.`,"ok");
 }
+function showMsg(m,t){const el=document.getElementById('importMsg');el.style.display='block';el.style.color=t==='ok'?'var(--green)':'var(--red)';el.style.background=t==='ok'?'#e8f5e9':'#ffebee';el.textContent=m;setTimeout(()=>el.style.display='none',8000);}
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-initSelectArea();
-updateHeaderStats();
+// ════════════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════════════
+document.getElementById('gGrado').value=gradoActual;
+renderPerTabs();renderCursadas();guardarTodo();
 </script>
 </body>
 </html>
