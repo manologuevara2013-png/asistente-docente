@@ -1871,9 +1871,28 @@ function guardarAPs(){aps=JSON.parse(JSON.stringify(apsLocal));sv('aps',aps);con
 // ════════════════════════════════════════════════════════════════════════════
 function importarExcel(input){
   const file=input.files[0];if(!file)return;
+  const name=file.name.toLowerCase();
+
+  // Rechazar archivos que no sean Excel
+  if(name.endsWith('.pdf')){
+    showMsg("❌ Ese archivo es un PDF, no un Excel. Subí un archivo .xlsx o .xls","error");
+    input.value="";return;
+  }
+  if(!name.endsWith('.xlsx')&&!name.endsWith('.xls')&&!name.endsWith('.csv')){
+    showMsg("❌ Formato no soportado. Subí un archivo .xlsx o .xls","error");
+    input.value="";return;
+  }
+
   const reader=new FileReader();
   reader.onload=function(e){
     try{
+      // Verificar que no sea un PDF disfrazado
+      const arr=new Uint8Array(e.target.result);
+      if(arr.length>=4 && arr[0]===0x25 && arr[1]===0x50 && arr[2]===0x44 && arr[3]===0x46){
+        showMsg("❌ Ese archivo es un PDF renombrado, no un Excel real. Subí un .xlsx o .xls verdadero.","error");
+        input.value="";return;
+      }
+
       const wb=XLSX.read(e.target.result,{type:"array"});
       const sn=wb.SheetNames.find(n=>/alumno|resumen/i.test(n))||wb.SheetNames[0];
       const ws=wb.Sheets[sn];
@@ -1883,9 +1902,25 @@ function importarExcel(input){
       const fn=grid.findIndex(r=>/nombre\s*y\s*apellido/i.test(String(r[0]||"")));
       if(fc>=0&&fn>=0) importDGE(grid,fc,fn);
       else importSimple(grid);
-    }catch(err){showMsg("❌ "+err.message,"error");}
+    }catch(err){showMsg("❌ No se pudo leer el archivo. ¿Estás segura de que es un Excel (.xlsx/.xls)? Error: "+err.message,"error");}
     input.value="";
   };reader.readAsArrayBuffer(file);
+}
+
+// Validar que un string parece un nombre real de persona
+function esNombreValido(s){
+  if(!s||s.length<3||s.length>80) return false;
+  // Rechazar si tiene más de 30% de caracteres no-letra
+  const letras=s.replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s,.\-']/g,'');
+  if(letras.length/s.length < 0.7) return false;
+  // Rechazar patrones de PDF/binario
+  if(/^[%\/\[\]{}\\<>|#\^`~*]/.test(s)) return false;
+  if(/^(obj|endobj|endstream|stream|xref|trailer|startxref|%%EOF|%PDF)/i.test(s)) return false;
+  if(/^\d+(\s\d+)*\s*(f|n|R)?\s*$/.test(s)) return false; // "0000000016 00000 n"
+  if(/^[\d.]+$/.test(s)) return false; // solo números
+  // Debe tener al menos 2 letras consecutivas
+  if(!/[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]{2,}/i.test(s)) return false;
+  return true;
 }
 function importDGE(grid,fc,fn){
   const ct=String(grid[fc][0]||"");const mg=ct.match(/(\d+)\s*°/);
@@ -1928,22 +1963,25 @@ function importSimple(grid){
     // Asumir que es una lista plana de nombres, primera fila puede ser header o nombre
     let startRow=0;
     if(/nombre|alumno|apellido|listado/i.test(String(hd[0]||"")))startRow=1;
-    let nv=0;
+    let nv=0, descartados=0;
     for(let r=startRow;r<grid.length;r++){
       const nm=String(grid[r][0]||"").trim();
       if(!nm)continue;
+      if(!esNombreValido(nm)){descartados++;continue;}
       if(alumnos.find(a=>a.nombre.toLowerCase()===nm.toLowerCase()&&a.grado===gradoAlumnos))continue;
       alumnos.push({id:nextId++,nombre:nm,grado:gradoAlumnos});nv++;
     }
     guardarTodo();renderAlumnos();
-    showMsg(`✅ ${nv} alumno(s) cargado(s) en ${gradoAlumnos} Grado.`,"ok");
+    let msg=`✅ ${nv} alumno(s) cargado(s) en ${gradoAlumnos} Grado.`;
+    if(descartados)msg+=` (${descartados} fila(s) descartada(s) por no ser nombres válidos)`;
+    showMsg(msg,"ok");
     return;
   }
 
   if(cn<0){showMsg("❌ Sin columna 'Nombre'.","error");return;}
   let nv=0,ac=0,ni=0;
   for(let r=1;r<grid.length;r++){
-    const f=grid[r];const nm=String(f[cn]||"").trim();if(!nm)continue;
+    const f=grid[r];const nm=String(f[cn]||"").trim();if(!nm||!esNombreValido(nm))continue;
     const gr=cg>=0?String(f[cg]||"").trim():"";
     const gn=gr.replace(/[°\s]/g,"").replace(/[a-záéíóú]+/gi,"");
     const grado=gr?GRADOS.find(g=>g.replace("°","")=== gn)||gr:gradoAlumnos;
