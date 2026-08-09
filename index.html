@@ -180,8 +180,9 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
   <button onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
   <button onclick="showTab('docentes')">👩‍🏫 Docentes</button>
   <button onclick="showTab('informes')">📊 Informes</button>
+  <button onclick="showTab('auditoria')">📋 Auditoría</button>
   <button onclick="showTab('chat')">🤖 Asistente IA</button>
-  <button onclick="showTab('config')">⚙️ Configuración</button>
+  <button onclick="showTab('config')">⚙️ Config</button>
 </div>
 
 <div class="page">
@@ -408,8 +409,72 @@ Puedo ayudarte a:
   </div>
 </div>
 
+<!-- ═══ TAB: AUDITORÍA ═══ -->
+<div id="tab-auditoria" class="hidden">
+  <div class="card">
+    <div class="card-head">
+      <h2>📋 Registro de auditoría — Cambios y modificaciones</h2>
+      <div class="row">
+        <button class="btn btn-green btn-sm" onclick="exportarAuditoria()">📥 Exportar a Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="imprimirAuditoria()">🖨️ Imprimir</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0" id="auditoriaLista">
+      <div class="empty" style="padding:16px">No hay cambios registrados.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ TAB: CONFIG ═══ -->
 <div id="tab-config" class="hidden">
+
+  <!-- CLAVE DE SEGURIDAD -->
+  <div class="card">
+    <div class="card-head"><h2>🔐 Clave de seguridad</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+        Esta clave se pide para <strong>borrar o editar</strong> evaluaciones, eventos de convivencia y registros de alumnos.
+        Protege contra cambios accidentales y asegura que solo personal autorizado pueda modificar datos.
+        Si no configurás clave, las acciones quedan sin protección.
+      </p>
+      <div id="claveStatus" style="margin-bottom:10px"></div>
+      <div class="row">
+        <input class="inp" id="inputClave" type="password" placeholder="Nueva clave (mínimo 4 caracteres)" style="width:200px">
+        <button class="btn btn-pri btn-sm" onclick="setClave()">🔐 Establecer clave</button>
+        <button class="btn btn-red btn-sm" onclick="removeClave()">🔓 Quitar clave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMOCIÓN DE GRADO -->
+  <div class="card">
+    <div class="card-head"><h2>🎓 Promoción de grado — Inicio de año</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+        Al comenzar un nuevo ciclo lectivo, seleccioná qué alumnos <strong>pasan de grado</strong> y cuáles <strong>repiten</strong>.
+        El historial completo (evaluaciones, convivencia, llamados) se conserva y migra con el alumno.
+        Los alumnos de 7° que egresan pasan a estado "Egresado".
+      </p>
+      <div class="row" style="margin-bottom:12px">
+        <label style="font-weight:600;font-size:13px;color:var(--pri)">Grado a promover:</label>
+        <select class="sel" id="promoGrado">
+          <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option>7°</option>
+        </select>
+        <button class="btn btn-pri btn-sm" onclick="renderPromocion()">Ver alumnos</button>
+      </div>
+      <div id="promocionLista"></div>
+    </div>
+  </div>
+
+  <!-- HISTORIAL DE ALUMNOS EGRESADOS/PROMOVIDOS -->
+  <div class="card">
+    <div class="card-head"><h2>📜 Historial de promociones</h2></div>
+    <div class="card-body" id="historialPromociones" style="padding:0">
+      <div class="empty" style="padding:16px">No hay promociones registradas.</div>
+    </div>
+  </div>
+
+  <!-- MATERIAS Y APS -->
   <div class="card">
     <div class="card-head"><h2>⚙️ Materias y Aprendizajes Prioritarios</h2>
       <button class="btn btn-pri btn-sm" id="btnGuardarAPs" onclick="guardarAPs()">💾 Guardar cambios</button>
@@ -428,7 +493,7 @@ Puedo ayudarte a:
   <div class="card">
     <div class="card-head"><h2>🗑️ Datos</h2></div>
     <div class="card-body">
-      <button class="btn btn-red btn-sm" onclick="if(confirm('¿Borrar TODOS los datos? No se puede deshacer.')){localStorage.clear();location.reload();}">Borrar todos los datos y empezar de cero</button>
+      <button class="btn btn-red btn-sm" onclick="accionProtegida(()=>{if(confirm('¿Borrar TODOS los datos? No se puede deshacer.')){localStorage.clear();location.reload();}},'Borrar TODOS los datos del sistema')">Borrar todos los datos y empezar de cero</button>
     </div>
   </div>
 </div>
@@ -463,6 +528,9 @@ let llamados   = ls("llamados",{});
 let convEventos = ls("convEventos",[]); // [{id,alumnoId,grado,periodo,fecha,categoria,tipo,descripcion}]
 let docentes   = ls("docentes",[]);    // [{id,nombre,asignaciones:[{materia,grado}]}]
 let docenteACargo = ls("docenteACargo",{}); // {grado: docenteId}
+let histPromociones = ls("histPromociones",[]); // [{fecha,grado,accion,alumnoId,alumnoNombre,gradoOrigen,gradoDestino}]
+let registroCambios = ls("registroCambios",[]); // [{fecha,hora,accion,detalle,motivo}]
+let claveSeguridad = ls("claveSeguridad",""); // clave simple almacenada
 let nextDocId  = ls("nextDocId",1);
 let aps        = ls("aps",APS_DEFAULT);
 let apsLocal   = JSON.parse(JSON.stringify(aps));
@@ -481,13 +549,43 @@ function guardarTodo(){
   sv("alumnos",alumnos);sv("evaluaciones",evaluaciones);sv("llamados",llamados);
   sv("convEventos",convEventos);sv("aps",aps);sv("nextId",nextId);
   sv("docentes",docentes);sv("docenteACargo",docenteACargo);sv("nextDocId",nextDocId);
+  sv("histPromociones",histPromociones);sv("claveSeguridad",claveSeguridad);
+  sv("registroCambios",registroCambios);
   sv("nextEvalId",nextEvalId);sv("nextConvId",nextConvId);
   sv("gradoActual",gradoActual);sv("periodoActual",periodoActual);
   const nEv=evaluaciones.length;const nAl=alumnos.length;const nConv=convEventos.length;
-  document.getElementById("headerStats").textContent=`${nAl} alumnos · ${nEv} evaluaciones · ${nConv} eventos conv. · 💾`;
+  const elHS=document.getElementById("headerStats");
+  if(elHS) elHS.textContent=`${nAl} alumnos · ${nEv} evaluaciones · ${nConv} eventos conv. · 💾`;
 }
 
 function round2(n){return Math.round(n*100)/100;}
+
+// Descarga de Excel compatible con iPhone/Safari
+function descargarExcel(wb, filename){
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  // Método compatible con Safari iOS
+  if(navigator.userAgent.match(/iPhone|iPad|iPod/i)){
+    const reader = new FileReader();
+    reader.onloadend = function(){
+      const a = document.createElement('a');
+      a.href = reader.result;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>document.body.removeChild(a), 100);
+    };
+    reader.readAsDataURL(blob);
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
+  }
+}
 function formatN(n){if(n===null||n===undefined||n==="")return"—";let s=round2(parseFloat(n)).toFixed(2).replace(/0+$/,"").replace(/\.$/,"");return s;}
 function notaCls(n){if(n===null||n===undefined||n==="")return"";const v=parseFloat(n);if(isNaN(v))return"";if(v>=9)return"nota-excelente";if(v>=7)return"nota-alta";if(v>=4)return"nota-media";return"nota-baja";}
 function notaColor(n){const v=parseFloat(n);if(isNaN(v))return"var(--text3)";if(v>=9)return"var(--blue)";if(v>=7)return"var(--green)";if(v>=4)return"var(--orange)";return"var(--red)";}
@@ -560,17 +658,19 @@ function showTab(t){
       t==='alumnos'?txt.includes('alumno'):
       t==='docentes'?txt.includes('docente'):
       t==='informes'?txt.includes('informe'):
+      t==='auditoria'?txt.includes('auditor'):
       t==='chat'?txt.includes('asistente'):
       txt.includes('config'));
   });
-  ['cursadas','alumnos','docentes','informes','chat','config'].forEach(id=>{
+  ['cursadas','alumnos','docentes','informes','auditoria','chat','config'].forEach(id=>{
     const el=document.getElementById('tab-'+id);if(el)el.classList.toggle('hidden',id!==t);
   });
   if(t==='cursadas'){renderPerTabs();renderCursadas();}
   if(t==='alumnos')renderAlumnos();
   if(t==='docentes')renderDocentes();
   if(t==='informes')renderInformeAlumnoList();
-  if(t==='config'){apsLocal=JSON.parse(JSON.stringify(aps));renderAreaList();renderAPPanel();}
+  if(t==='auditoria')renderAuditoria();
+  if(t==='config'){apsLocal=JSON.parse(JSON.stringify(aps));renderAreaList();renderAPPanel();renderClaveStatus();renderHistorialPromociones();}
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -581,11 +681,14 @@ function renderPerTabs(){
   document.getElementById('perTabs').innerHTML=PERIODOS.map((p,i)=>`<button class="per-tab${p===periodoActual?' active':''}" onclick="periodoActual='${p}';sv('periodoActual',periodoActual);renderPerTabs();renderCursadas()"><span class="dot dot-${i+1}"></span>${p}</button>`).join('');
 }
 function renderCursadas(){
-  document.getElementById('cursadasTitle').textContent=`📚 Cursadas · ${periodoActual} 2026`;
+  const elCT=document.getElementById('cursadasTitle');
+  if(elCT) elCT.textContent=`📚 Cursadas · ${periodoActual} 2026`;
+  const elCL=document.getElementById('cursadasList');
+  if(!elCL)return;
   const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
   const fils=alumnos.filter(a=>a.grado===gradoActual);
   if(!fils.length){
-    document.getElementById('cursadasList').innerHTML=`<div class="empty"><div class="empty-icon">📚</div>No hay alumnos en ${gradoActual} grado. Importá o agregá alumnos en la pestaña "Alumnos".</div>`;
+    elCL.innerHTML=`<div class="empty"><div class="empty-icon">📚</div>No hay alumnos en ${gradoActual} grado. Importá o agregá alumnos en la pestaña "Alumnos".</div>`;
     return;
   }
   let html='<table><thead><tr><th style="min-width:200px">Materia</th><th class="center">Evaluaciones</th><th class="center">Notas cargadas</th><th class="center">Promedio</th><th class="center">Aprobados</th><th class="center">Desaprobados</th><th></th></tr></thead><tbody>';
@@ -616,7 +719,7 @@ function renderCursadas(){
     <td class="center">MB: ${mb} · B: ${b} · R: ${r}</td><td class="center" style="color:var(--green)">${mb+b}</td>
     <td class="center" style="color:var(--red)">${r}</td><td class="center"><button class="btn btn-orange btn-sm" onclick="document.querySelector('#tab-cursadas .card:nth-child(3)').scrollIntoView({behavior:'smooth'})">Ver ↓</button></td></tr>`;
   html+='</tbody></table>';
-  document.getElementById('cursadasList').innerHTML=html;
+  elCL.innerHTML=html;
   renderConvivencia();
 }
 
@@ -633,7 +736,11 @@ function cerrarDetalle(){document.getElementById('materiaDetalle').style.display
 // CONVIVENCIA
 // ════════════════════════════════════════════════════════════════════════════
 function renderConvivencia(){
-  document.getElementById('convPerLabel').textContent=periodoActual;
+  const elPL=document.getElementById('convPerLabel');
+  if(elPL) elPL.textContent=periodoActual;
+  const elRes=document.getElementById('convResumen');
+  const elEvs=document.getElementById('convEventos');
+  if(!elRes||!elEvs)return;
   const fils=alumnos.filter(a=>a.grado===gradoActual);
   const evs=convEventos.filter(e=>e.grado===gradoActual&&e.periodo===periodoActual);
 
@@ -707,14 +814,19 @@ function renderConvivencia(){
 }
 
 function eliminarConvEvento(id){
-  if(!confirm('¿Eliminar este evento?'))return;
-  const ev=convEventos.find(e=>e.id===id);
-  if(ev&&ev.tipo==='negativo'){llamados[ev.alumnoId]=Math.max(0,(llamados[ev.alumnoId]||0)-1);}
-  convEventos=convEventos.filter(e=>e.id!==id);guardarTodo();renderConvivencia();
+  const evC=convEventos.find(e=>e.id===id);
+  const descC=evC?`Eliminar evento convivencia: ${evC.tipo} - alumno ID ${evC.alumnoId} (${evC.fecha})`:'Eliminar evento';
+  accionProtegida(()=>{
+    if(!confirm('¿Eliminar este evento?'))return;
+    const ev=convEventos.find(e=>e.id===id);
+    if(ev&&ev.tipo==='negativo'){llamados[ev.alumnoId]=Math.max(0,(llamados[ev.alumnoId]||0)-1);}
+    convEventos=convEventos.filter(e=>e.id!==id);guardarTodo();renderConvivencia();
+  }, descC);
 }
 
 function editarConvEvento(id){
-  const ev=convEventos.find(e=>e.id===id);if(!ev)return;
+  accionProtegida(()=>{
+    const ev=convEventos.find(e=>e.id===id);if(!ev)return;
   const al=alumnos.find(a=>a.id===ev.alumnoId);
   let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
   <div class="modal" style="max-width:550px"><div class="modal-head" style="background:var(--orange)"><h3>✏️ Editar evento de convivencia</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
@@ -740,6 +852,7 @@ function editarConvEvento(id){
     </div>
   </div></div></div>`;
   document.body.insertAdjacentHTML('beforeend',html);
+  }); // fin accionProtegida editarConv
 }
 
 function guardarEdicionConv(id){
@@ -865,8 +978,12 @@ function renderEvalList(){
 }
 
 function eliminarEval(id){
-  if(!confirm('¿Eliminar esta evaluación?'))return;
-  evaluaciones=evaluaciones.filter(e=>e.id!==id);guardarTodo();renderEvalList();renderCursadas();
+  const ev=evaluaciones.find(e=>e.id===id);
+  const desc=ev?`Eliminar evaluación: ${ev.subtipo} - ${ev.materia} (${ev.fecha})`:'Eliminar evaluación';
+  accionProtegida(()=>{
+    if(!confirm('¿Eliminar esta evaluación?'))return;
+    evaluaciones=evaluaciones.filter(e=>e.id!==id);guardarTodo();renderEvalList();renderCursadas();
+  }, desc);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1007,15 +1124,31 @@ function editarEvalCampo(evalId,campo,valor){
 }
 
 function borrarNotaEval(evalId,alId){
-  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
-  delete ev.notas[alId];guardarTodo();
-  // Refrescar modal
-  cerrarModalNotas();abrirCargarNotas(evalId);
+  const evB=evaluaciones.find(e=>e.id===evalId);
+  const alB=alumnos.find(a=>a.id===alId);
+  const descB=`Borrar nota: ${alB?alB.nombre:'?'} en ${evB?evB.materia+' - '+evB.subtipo:'?'}`;
+  accionProtegida(()=>{
+    const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+    delete ev.notas[alId];guardarTodo();
+    cerrarModalNotas();abrirCargarNotas(evalId);
+  }, descB);
 }
 function guardarNotaEval(evalId,alId,val){
   const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
-  ev.notas[alId]=val===""?"":round2(parseFloat(val));
-  guardarTodo();
+  const anterior=ev.notas[alId];
+  const tieneAnterior=anterior!==undefined&&anterior!==""&&anterior!==null;
+  if(tieneAnterior&&val!==String(anterior)){
+    // Modificar nota existente → requiere autorización
+    const alN=alumnos.find(a=>a.id===alId);
+    accionProtegida(()=>{
+      ev.notas[alId]=val===""?"":round2(parseFloat(val));
+      guardarTodo();
+    },`Modificar nota: ${alN?alN.nombre:'?'} en ${ev.materia} - ${ev.subtipo} (${anterior} → ${val})`);
+  }else{
+    // Nota nueva (primera vez) → sin protección
+    ev.notas[alId]=val===""?"":round2(parseFloat(val));
+    guardarTodo();
+  }
 }
 function toggleAusente(evalId,alId,checked){
   const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
@@ -1038,17 +1171,23 @@ function selGradoAlumnos(g,btn){
 }
 function renderAlumnos(){
   const g=gradoAlumnos;
-  document.getElementById('alTituloCarga').textContent=`📂 Cargar alumnos de ${g} Grado`;
-  document.getElementById('alTituloListado').innerHTML=`👨‍🎓 Alumnos de ${g} Grado`;
+  const elTC=document.getElementById('alTituloCarga');
+  const elTL=document.getElementById('alTituloListado');
+  const elCont=document.getElementById('alConteo');
+  const elLista=document.getElementById('alumnosLista');
+  if(elTC) elTC.textContent=`📂 Cargar alumnos de ${g} Grado`;
+  if(elTL) elTL.innerHTML=`👨‍🎓 Alumnos de ${g} Grado <span id="alConteo" style="font-weight:400;font-size:13px;color:var(--text2)"></span>`;
   const fils=alumnos.filter(a=>a.grado===g).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  document.getElementById('alConteo').textContent=`(${fils.length} alumno${fils.length!==1?'s':''})`;
+  const elC2=document.getElementById('alConteo');
+  if(elC2) elC2.textContent=`(${fils.length} alumno${fils.length!==1?'s':''})`;
 
   // Docente a cargo selector
   const selDoc=document.getElementById('docenteACargo');
-  selDoc.innerHTML=`<option value="">— Sin asignar —</option>`+docentes.map(d=>`<option value="${d.id}"${docenteACargo[g]===d.id?' selected':''}>${escH(d.nombre)}</option>`).join('');
+  if(selDoc) selDoc.innerHTML=`<option value="">— Sin asignar —</option>`+docentes.map(d=>`<option value="${d.id}"${docenteACargo[g]===d.id?' selected':''}>${escH(d.nombre)}</option>`).join('');
 
+  if(!elLista)return;
   if(!fils.length){
-    document.getElementById('alumnosLista').innerHTML=`<div class="empty" style="padding:24px"><div class="empty-icon">👨‍🎓</div>
+    elLista.innerHTML=`<div class="empty" style="padding:24px"><div class="empty-icon">👨‍🎓</div>
       <p style="margin-bottom:6px">No hay alumnos en <strong>${g} Grado</strong>.</p>
       <p style="font-size:12px;color:var(--text2)">Usá las opciones de arriba para cargar el listado desde un Excel o agregarlos uno por uno.</p></div>`;
     return;
@@ -1069,7 +1208,7 @@ function renderAlumnos(){
     </tr>`;
   });
   html+='</tbody></table>';
-  document.getElementById('alumnosLista').innerHTML=html;
+  elLista.innerHTML=html;
   updateHeaderStats();
 }
 function agregarAlumno(){
@@ -1085,7 +1224,7 @@ function editarAlumno(id){
   const nuevoNombre=prompt('Editar nombre:',al.nombre);
   if(nuevoNombre!==null&&nuevoNombre.trim()){al.nombre=nuevoNombre.trim();guardarTodo();renderAlumnos();}
 }
-function eliminarAlumno(id){if(!confirm("¿Eliminar este alumno?"))return;alumnos=alumnos.filter(a=>a.id!==id);guardarTodo();renderAlumnos();}
+function eliminarAlumno(id){const alE=alumnos.find(a=>a.id===id);accionProtegida(()=>{if(!confirm("¿Eliminar este alumno?"))return;alumnos=alumnos.filter(a=>a.id!==id);guardarTodo();renderAlumnos();},'Eliminar alumno: '+(alE?alE.nombre:'ID '+id));}
 function cambiarLlamado(id,d){llamados[id]=Math.max(0,(llamados[id]||0)+d);guardarTodo();renderAlumnos();}
 function guardarDocenteACargo(){
   const val=document.getElementById('docenteACargo').value;
@@ -1111,7 +1250,7 @@ function descargarPlantillaAlumnos(){
   wsI["!cols"]=[{wch:60}];
   XLSX.utils.book_append_sheet(wb,ws,"Alumnos");
   XLSX.utils.book_append_sheet(wb,wsI,"Instrucciones");
-  XLSX.writeFile(wb,`Plantilla_Alumnos_${gradoAlumnos}.xlsx`);
+  descargarExcel(wb,`Plantilla_Alumnos_${gradoAlumnos}.xlsx`);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1243,7 +1382,7 @@ function descargarPlantillaDocentes(){
   ]);
   ws["!cols"]=[{wch:25},{wch:30},{wch:8}];
   XLSX.utils.book_append_sheet(wb,ws,"Docentes");
-  XLSX.writeFile(wb,"Plantilla_Docentes.xlsx");
+  descargarExcel(wb,"Plantilla_Docentes.xlsx");
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1396,7 +1535,7 @@ function exportarInformeExcel(){
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws["!cols"]=[{wch:30},{wch:18},{wch:12},{wch:14},{wch:24},{wch:18},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,"Informe");
-  XLSX.writeFile(wb,`Informe_${al.nombre.replace(/[^a-zA-Z]/g,"_")}_${al.grado}.xlsx`);
+  descargarExcel(wb,`Informe_${al.nombre.replace(/[^a-zA-Z]/g,"_")}_${al.grado}.xlsx`);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1448,6 +1587,264 @@ function ejecutarAccion(a){
   if(a.tipo==="registrar_llamado"){
     const{alumnoId}=a.datos||{};if(alumnoId){llamados[alumnoId]=(llamados[alumnoId]||0)+1;guardarTodo();}
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// AUDITORÍA
+// ════════════════════════════════════════════════════════════════════════════
+function renderAuditoria(){
+  const el=document.getElementById('auditoriaLista');
+  if(!registroCambios.length){el.innerHTML=`<div class="empty" style="padding:16px">No hay cambios registrados. Cada vez que se edite, borre o modifique un registro, quedará asentado acá con fecha, hora, acción y motivo.</div>`;return;}
+  const recientes=registroCambios.slice().reverse();
+  let html='<table><thead><tr><th style="width:90px">Fecha</th><th style="width:70px">Hora</th><th>Acción realizada</th><th>Motivo del cambio</th></tr></thead><tbody>';
+  recientes.forEach(r=>{
+    html+=`<tr><td style="font-size:12px">${r.fecha}</td><td style="font-size:12px;color:var(--text2)">${r.hora}</td>
+      <td style="font-size:12px"><strong>${escH(r.accion)}</strong></td>
+      <td style="font-size:12px;color:var(--text2)">${escH(r.motivo)}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+function exportarAuditoria(){
+  if(!registroCambios.length){alert('No hay registros para exportar.');return;}
+  const wb=XLSX.utils.book_new();
+  const rows=[["Fecha","Hora","Acción","Motivo"],...registroCambios.map(r=>[r.fecha,r.hora,r.accion,r.motivo])];
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:12},{wch:10},{wch:40},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,ws,"Auditoría");
+  descargarExcel(wb,"Registro_Auditoria_GEI.xlsx");
+}
+function imprimirAuditoria(){
+  if(!registroCambios.length){alert('No hay registros.');return;}
+  const content=document.getElementById('auditoriaLista').innerHTML;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Auditoría</title><style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px}h1{font-size:16px;color:#4A6572}table{border-collapse:collapse;width:100%}th,td{padding:6px 10px;border:1px solid #ddd;font-size:11px}th{background:#4A6572;color:#fff}@media print{body{padding:10px}}</style></head><body><h1>📋 Registro de Auditoría — P276 FASTA JUAN PABLO II</h1><p>Generado: ${new Date().toLocaleString('es-AR')}</p>${content}</body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CLAVE DE SEGURIDAD
+// ════════════════════════════════════════════════════════════════════════════
+function setClave(){
+  const c=document.getElementById('inputClave').value;
+  if(!c||c.length<4){alert('La clave debe tener al menos 4 caracteres.');return;}
+  claveSeguridad=c;guardarTodo();
+  document.getElementById('inputClave').value='';
+  renderClaveStatus();
+  alert('✅ Clave establecida correctamente.');
+}
+function removeClave(){
+  if(claveSeguridad){
+    accionProtegida(()=>{claveSeguridad='';guardarTodo();renderClaveStatus();alert('🔓 Clave eliminada.');},'Quitar clave de seguridad');
+  }else{alert('No hay clave configurada.');}
+}
+function renderClaveStatus(){
+  const el=document.getElementById('claveStatus');
+  if(!el)return;
+  el.innerHTML=claveSeguridad
+    ?'<span class="badge badge-green">🔐 Clave activa — Las acciones de borrar/editar están protegidas</span>'
+    :'<span class="badge badge-orange">🔓 Sin clave — Cualquiera puede borrar o editar registros</span>';
+}
+function accionProtegida(callback, descripcionAccion){
+  if(!claveSeguridad){
+    // Sin clave configurada: pedir solo motivo
+    pedirMotivo(descripcionAccion||'Acción sin descripción', (motivo)=>{
+      registrarCambio(descripcionAccion||'Acción', motivo);
+      callback();
+    });
+    return;
+  }
+  // Con clave: pedir clave + motivo
+  const html=`<div class="modal-overlay" id="modalClave" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:450px"><div class="modal-head" style="background:var(--red)"><h3>🔐 Autorización requerida</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:4px"><strong>Acción:</strong> ${escH(descripcionAccion||'Modificar registro')}</p>
+    <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">🔐 Clave de seguridad</label>
+      <input type="password" class="inp" id="inputClaveCheck" placeholder="Ingresá la clave" style="width:100%" onkeydown="if(event.key==='Enter')document.getElementById('inputMotivoCheck').focus()">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">📝 Motivo del cambio <span style="color:var(--red)">*</span></label>
+      <input class="inp" id="inputMotivoCheck" placeholder="Ej: Error en la carga de nota / Decisión de dirección / Corrección..." style="width:100%" onkeydown="if(event.key==='Enter')verificarClave()">
+    </div>
+    <div id="claveError" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+    <div style="text-align:right">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('modalClave').remove()" style="margin-right:8px">Cancelar</button>
+      <button class="btn btn-pri" onclick="verificarClave()">✅ Autorizar</button>
+    </div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+  document.getElementById('inputClaveCheck').focus();
+  window._claveCallback=callback;
+  window._claveDescripcion=descripcionAccion||'Acción';
+}
+
+function pedirMotivo(descripcionAccion, callback){
+  const html=`<div class="modal-overlay" id="modalMotivo" onclick="if(event.target===this)this.remove()">
+  <div class="modal" style="max-width:420px"><div class="modal-head" style="background:var(--orange)"><h3>📝 Motivo del cambio</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:8px"><strong>Acción:</strong> ${escH(descripcionAccion)}</p>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">📝 Motivo <span style="color:var(--red)">*</span></label>
+      <input class="inp" id="inputMotivoSolo" placeholder="Ej: Corrección de error / Decisión de dirección..." style="width:100%" onkeydown="if(event.key==='Enter')confirmarMotivo()">
+    </div>
+    <div id="motivoError" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+    <div style="text-align:right">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('modalMotivo').remove()" style="margin-right:8px">Cancelar</button>
+      <button class="btn btn-pri" onclick="confirmarMotivo()">✅ Confirmar</button>
+    </div>
+  </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+  document.getElementById('inputMotivoSolo').focus();
+  window._motivoCallback=callback;
+}
+
+function confirmarMotivo(){
+  const motivo=document.getElementById('inputMotivoSolo').value.trim();
+  if(!motivo){document.getElementById('motivoError').textContent='⚠️ Debés escribir un motivo.';document.getElementById('motivoError').style.display='block';return;}
+  document.getElementById('modalMotivo').remove();
+  if(window._motivoCallback){window._motivoCallback(motivo);window._motivoCallback=null;}
+}
+
+function verificarClave(){
+  const inp=document.getElementById('inputClaveCheck');
+  const motivo=document.getElementById('inputMotivoCheck').value.trim();
+  if(inp.value!==claveSeguridad){
+    document.getElementById('claveError').textContent='❌ Clave incorrecta.';
+    document.getElementById('claveError').style.display='block';
+    inp.value='';inp.focus();return;
+  }
+  if(!motivo){
+    document.getElementById('claveError').textContent='⚠️ Debés escribir un motivo del cambio.';
+    document.getElementById('claveError').style.display='block';return;
+  }
+  document.getElementById('modalClave').remove();
+  registrarCambio(window._claveDescripcion||'Acción', motivo);
+  if(window._claveCallback){window._claveCallback();window._claveCallback=null;}
+}
+
+function registrarCambio(accion, motivo){
+  const ahora=new Date();
+  registroCambios.push({
+    fecha:ahora.toISOString().split('T')[0],
+    hora:ahora.toTimeString().split(' ')[0],
+    accion,
+    motivo
+  });
+  sv("registroCambios",registroCambios);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PROMOCIÓN DE GRADO
+// ════════════════════════════════════════════════════════════════════════════
+function renderPromocion(){
+  const grado=document.getElementById('promoGrado').value;
+  const fils=alumnos.filter(a=>a.grado===grado).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const gi=GRADOS.indexOf(grado);
+  const gradoSig=gi<GRADOS.length-1?GRADOS[gi+1]:null;
+
+  if(!fils.length){
+    document.getElementById('promocionLista').innerHTML=`<div class="empty" style="padding:12px">No hay alumnos en ${grado}.</div>`;
+    return;
+  }
+
+  let html=`<div style="background:#f8fafe;border:1px solid #d0e3f0;border-radius:8px;padding:14px;margin-bottom:12px">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:8px">
+      Seleccioná la acción para cada alumno de <strong>${grado} Grado</strong>.
+      ${gradoSig?`Los que "Pasan" se moverán a <strong>${gradoSig} Grado</strong>.`:'Los que egresan se marcarán como <strong>Egresados</strong>.'}
+      Los que "Repiten" se quedan en ${grado}. El historial se conserva en todos los casos.
+    </p>
+  </div>
+  <table><thead><tr>
+    <th>Alumno/a</th>
+    <th class="center">Evaluaciones</th>
+    <th class="center">Conv. eventos</th>
+    <th class="center" style="width:140px">Acción</th>
+  </tr></thead><tbody>`;
+
+  fils.forEach(al=>{
+    const nEvals=evaluaciones.filter(e=>Object.keys(e.notas).includes(String(al.id))).length;
+    const nConv=convEventos.filter(e=>e.alumnoId===al.id).length;
+    html+=`<tr>
+      <td><strong>${escH(al.nombre)}</strong></td>
+      <td class="center">${nEvals}</td>
+      <td class="center">${nConv}</td>
+      <td class="center">
+        <select class="sel" id="promo_${al.id}" style="font-size:12px">
+          <option value="pasa">✅ ${gradoSig?'Pasa a '+gradoSig:'Egresa'}</option>
+          <option value="repite">🔄 Repite ${grado}</option>
+          <option value="nada">— Sin cambios —</option>
+        </select>
+      </td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table>
+  <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:11px;color:var(--text3)">⚠️ Esta acción no se puede deshacer. Revisá bien antes de confirmar.</span>
+    <button class="btn btn-green" onclick="ejecutarPromocion('${grado}')">🎓 Confirmar promoción</button>
+  </div>`;
+
+  document.getElementById('promocionLista').innerHTML=html;
+}
+
+function ejecutarPromocion(grado){
+  accionProtegida(()=>{
+    const gi=GRADOS.indexOf(grado);
+    const gradoSig=gi<GRADOS.length-1?GRADOS[gi+1]:null;
+    const fils=alumnos.filter(a=>a.grado===grado);
+    const fecha=new Date().toISOString().split('T')[0];
+    let promovidos=0,repetidores=0,egresados=0;
+
+    fils.forEach(al=>{
+      const sel=document.getElementById(`promo_${al.id}`);
+      if(!sel)return;
+      const accion=sel.value;
+      if(accion==='nada')return;
+
+      if(accion==='pasa'){
+        if(gradoSig){
+          histPromociones.push({fecha,accion:'promovido',alumnoId:al.id,alumnoNombre:al.nombre,gradoOrigen:grado,gradoDestino:gradoSig});
+          al.grado=gradoSig;
+          promovidos++;
+        }else{
+          histPromociones.push({fecha,accion:'egresado',alumnoId:al.id,alumnoNombre:al.nombre,gradoOrigen:grado,gradoDestino:'Egresado'});
+          al.grado='Egresado';
+          egresados++;
+        }
+      }
+      if(accion==='repite'){
+        histPromociones.push({fecha,accion:'repite',alumnoId:al.id,alumnoNombre:al.nombre,gradoOrigen:grado,gradoDestino:grado});
+        repetidores++;
+      }
+    });
+
+    guardarTodo();
+    renderPromocion();
+    renderHistorialPromociones();
+    let msg=`🎓 Promoción completada: `;
+    if(promovidos)msg+=`${promovidos} promovido(s)`;
+    if(egresados)msg+=`${egresados?', ':''}${egresados} egresado(s)`;
+    if(repetidores)msg+=`${promovidos||egresados?', ':''}${repetidores} repitente(s)`;
+    alert(msg);
+  }, `Promoción de grado: ${grado}`);
+}
+
+function renderHistorialPromociones(){
+  const el=document.getElementById('historialPromociones');
+  if(!el)return;
+  if(!histPromociones.length){el.innerHTML=`<div class="empty" style="padding:16px">No hay promociones registradas.</div>`;return;}
+  const recientes=histPromociones.slice().reverse().slice(0,50);
+  let html='<table><thead><tr><th>Fecha</th><th>Alumno/a</th><th class="center">Origen</th><th class="center">→</th><th class="center">Destino</th><th class="center">Acción</th></tr></thead><tbody>';
+  recientes.forEach(h=>{
+    const badgeCls=h.accion==='promovido'?'badge-green':h.accion==='egresado'?'badge-blue':'badge-orange';
+    html+=`<tr><td style="font-size:12px">${h.fecha}</td><td><strong>${escH(h.alumnoNombre)}</strong></td>
+      <td class="center">${h.gradoOrigen}</td><td class="center">→</td><td class="center">${h.gradoDestino}</td>
+      <td class="center"><span class="badge ${badgeCls}">${h.accion}</span></td></tr>`;
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1567,6 +1964,7 @@ function showMsg(m,t){const el=document.getElementById('importMsg');el.style.dis
 // ════════════════════════════════════════════════════════════════════════════
 document.getElementById('gGrado').value=gradoActual;
 renderPerTabs();renderCursadas();guardarTodo();
+renderClaveStatus();renderHistorialPromociones();
 </script>
 </body>
 </html>
