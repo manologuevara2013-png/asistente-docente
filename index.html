@@ -168,15 +168,51 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
 </head>
 <body>
 
-<div class="header">
-  <div class="logo"><div class="logo-bars"><span></span><span></span><span></span></div>GEI</div>
-  <span class="school-label">P276 · FASTA JUAN PABLO II</span>
-  <div class="header-right">
-    <span id="headerStats">💾 Guardado automático</span>
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PANTALLA DE LOGIN (overlay) -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="loginOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#FDFCF8;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.1);padding:32px;max-width:420px;width:100%">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:48px">🎓</div>
+      <h1 style="color:#1d3a5f;font-size:22px;margin:8px 0 4px">Asistente Docente GEI</h1>
+      <p style="color:#c9b06a;font-size:13px;margin:0">Colegio FASTA Juan Pablo II</p>
+    </div>
+
+    <div id="loginForm">
+      <label style="display:block;font-size:12px;text-transform:uppercase;color:#5a5346;margin-bottom:4px;font-weight:600">Email</label>
+      <input id="loginEmail" type="email" placeholder="tu-email@ejemplo.com" autocomplete="username"
+             style="width:100%;padding:10px;border:1px solid #b8ae95;border-radius:6px;margin-bottom:12px;box-sizing:border-box;font-size:14px">
+
+      <label style="display:block;font-size:12px;text-transform:uppercase;color:#5a5346;margin-bottom:4px;font-weight:600">Contraseña</label>
+      <input id="loginPass" type="password" placeholder="Tu contraseña" autocomplete="current-password"
+             style="width:100%;padding:10px;border:1px solid #b8ae95;border-radius:6px;margin-bottom:16px;box-sizing:border-box;font-size:14px">
+
+      <button onclick="hacerLoginGEI()"
+              style="width:100%;padding:12px;background:#1d3a5f;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:14px;margin-bottom:8px">
+        Ingresar
+      </button>
+
+      <div id="loginMsg" style="margin-top:12px;font-size:13px;text-align:center;min-height:18px"></div>
+    </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:11px;color:#8a8069;text-align:center">
+      ℹ Usá las mismas credenciales que Convivencia AEC
+    </div>
   </div>
 </div>
 
-<div class="nav" id="mainNav">
+<div class="header" style="display:none" id="appHeader">
+  <div class="logo"><div class="logo-bars"><span></span><span></span><span></span></div>GEI</div>
+  <span class="school-label">P276 · FASTA JUAN PABLO II</span>
+  <div class="header-right" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span id="headerUsuario" style="font-size:12px;color:#4A6572;font-weight:600"></span>
+    <span id="headerStats" style="font-size:11px;color:#999">💾 Guardado automático</span>
+    <button onclick="cerrarSesionGEI()" style="padding:6px 12px;background:#a34434;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="nav" id="mainNav" style="display:none">
   <button class="active" onclick="showTab('cursadas')">📚 Mis Cursadas</button>
   <button onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
   <button onclick="showTab('docentes')">👩‍🏫 Docentes</button>
@@ -1698,6 +1734,140 @@ function showMsg(m,t){const el=document.getElementById('importMsg');el.style.dis
 document.getElementById('gGrado').value=gradoActual;
 renderPerTabs();renderCursadas();guardarTodo();
 renderHistorialPromociones();
+// ════════════════════════════════════════════════════════════════════════════
+// LOGIN COMPARTIDO CON SUPABASE
+// ════════════════════════════════════════════════════════════════════════════
+
+async function hacerLoginGEI(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const msgEl = document.getElementById('loginMsg');
+
+  if(!email || !pass){
+    msgEl.innerHTML = '<span style="color:#a34434">⚠ Completá email y contraseña</span>';
+    return;
+  }
+  if(!sb){
+    msgEl.innerHTML = '<span style="color:#a34434">⚠ Sin conexión a Supabase. Recargá la página.</span>';
+    return;
+  }
+
+  msgEl.innerHTML = '<span style="color:#1d3a5f">⏳ Ingresando...</span>';
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if(error) throw error;
+    if(!data.session){
+      msgEl.innerHTML = '<span style="color:#a34434">⚠ No se pudo iniciar sesión</span>';
+      return;
+    }
+
+    usuarioLog = data.session.user;
+    await cargarRolGEI();
+    mostrarAppGEI();
+
+  } catch(e){
+    console.error('Error login:', e);
+    msgEl.innerHTML = '<span style="color:#a34434">⚠ ' + (e.message || 'Email o contraseña incorrectos') + '</span>';
+  }
+}
+
+async function cargarRolGEI(){
+  if(!sb || !usuarioLog) return;
+  try {
+    const { data, error } = await sb.from('usuarios')
+      .select('id, email, nombre, rol, nivel, grado')
+      .eq('id', usuarioLog.id)
+      .maybeSingle();
+
+    if(error || !data){
+      alert('⛔ Tu usuario no tiene rol asignado. Contactá a Dirección.');
+      await sb.auth.signOut();
+      location.reload();
+      return;
+    }
+
+    usuarioActual = data;
+    console.log('✓ Usuario cargado:', usuarioActual.nombre, '— Rol:', usuarioActual.rol);
+
+    // Mostrar el nombre y rol en el header
+    const rolEmoji = {
+      'desarrollador': '🔧',
+      'direccion': '🏛',
+      'admin': '🏛',
+      'coordinador': '📘',
+      'docente': '👨‍🏫'
+    }[usuarioActual.rol] || '👤';
+
+    const rolColor = {
+      'desarrollador': '#6B4C93',
+      'direccion': '#a34434',
+      'admin': '#a34434',
+      'coordinador': '#2e5e3f',
+      'docente': '#1d3a5f'
+    }[usuarioActual.rol] || '#5a5346';
+
+    document.getElementById('headerUsuario').innerHTML =
+      rolEmoji + ' <b>' + (usuarioActual.nombre || usuarioActual.email) + '</b> ' +
+      '<span style="color:' + rolColor + ';text-transform:uppercase;font-size:10px;margin-left:4px">' +
+      usuarioActual.rol + '</span>';
+
+  } catch(e){
+    console.error('Error cargando rol:', e);
+    alert('Error cargando tu rol. Reintentá.');
+  }
+}
+
+function mostrarAppGEI(){
+  // Ocultar login
+  document.getElementById('loginOverlay').style.display = 'none';
+  // Mostrar header, nav y page
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('mainNav').style.display = 'flex';
+  document.getElementById('page').style.display = '';
+}
+
+async function cerrarSesionGEI(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  if(sb) await sb.auth.signOut();
+  usuarioLog = null;
+  usuarioActual = null;
+  location.reload();
+}
+
+async function verificarSesionAlCargar(){
+  if(!sb){
+    // Sin Supabase, mostrar login (que mostrará error)
+    return;
+  }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      usuarioLog = session.user;
+      await cargarRolGEI();
+      if(usuarioActual){
+        mostrarAppGEI();
+      }
+    }
+    // Si no hay sesión, el loginOverlay sigue visible por defecto
+  } catch(e){
+    console.error('Error verificando sesión:', e);
+  }
+}
+
+// Ejecutar verificación de sesión al cargar la página
+window.addEventListener('load', verificarSesionAlCargar);
+
+// Permitir login con Enter
+document.addEventListener('DOMContentLoaded', function(){
+  const email = document.getElementById('loginEmail');
+  const pass = document.getElementById('loginPass');
+  if(email) email.addEventListener('keypress', (e) => { if(e.key === 'Enter') pass.focus(); });
+  if(pass) pass.addEventListener('keypress', (e) => { if(e.key === 'Enter') hacerLoginGEI(); });
+});
+
+
 </script>
 </body>
 </html>
