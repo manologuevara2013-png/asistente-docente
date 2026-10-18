@@ -182,7 +182,7 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
   <button onclick="showTab('docentes')">👩‍🏫 Docentes</button>
   <button onclick="showTab('informes')">📊 Informes</button>
   <button onclick="showTab('auditoria')">📋 Auditoría</button>
-  <button onclick="showTab('chat')">🤖 Asistente IA</button>
+  <button onclick="alert('🔒 Asistente IA en desarrollo con Claude Haiku.\n\nEstará disponible próximamente integrado con la plataforma institucional.')" style="opacity:0.6;cursor:help">🤖 Asistente IA 🔒</button>
   <button onclick="showTab('config')">⚙️ Config</button>
 </div>
 
@@ -212,18 +212,6 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
       </div>
     </div>
     <div class="card-body" style="padding:0" id="cursadasList"></div>
-  </div>
-
-  <!-- Convivencia -->
-  <div class="card">
-    <div class="card-head">
-      <h2>🤝 Convivencia · <span id="convPerLabel">Primer Período</span></h2>
-      <button class="btn btn-orange btn-sm" onclick="abrirNuevoEventoConv()">+ Registrar evento</button>
-    </div>
-    <div class="card-body">
-      <div id="convResumen" style="margin-bottom:12px"></div>
-      <div id="convEventos"></div>
-    </div>
   </div>
 
   <!-- Detalle de materia seleccionada -->
@@ -385,27 +373,14 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
 
 <!-- ═══ TAB: CHAT ═══ -->
 <div id="tab-chat" class="hidden">
-  <div class="chat-box">
-    <div class="chat-msgs" id="chatMsgs">
-      <div class="msg-bot"><div class="msg-label">🤖 Asistente</div>
-      <div class="bubble-bot">¡Hola! Soy tu asistente docente para el sistema GEI.
-
-Puedo ayudarte a:
-• Cargar notas: «8.5 a Lucía en Matemática, Primer Período»
-• Registrar llamados de atención
-• Consultar promedios y rendimiento
-• Responder dudas sobre la normativa DGE
-
-¿Qué necesitás?</div></div>
-    </div>
-    <div class="chat-sugs">
-      <button class="sug" onclick="setSug('8.5 a Lucía en Matemática')">Cargar nota</button>
-      <button class="sug" onclick="setSug('¿Cómo va Lucía en general?')">Rendimiento alumno</button>
-      <button class="sug" onclick="setSug('Llamado a Mateo por conducta')">Llamado de atención</button>
-    </div>
-    <div class="chat-input-row">
-      <input id="chatInput" placeholder="Escribí tu consulta..." onkeydown="if(event.key==='Enter')enviarChat()">
-      <button class="btn btn-pri" onclick="enviarChat()" id="btnEnviar">Enviar</button>
+  <div class="card">
+    <div class="card-head"><h2>🤖 Asistente IA — En desarrollo</h2></div>
+    <div class="card-body" style="text-align:center;padding:40px">
+      <div style="font-size:48px;margin-bottom:16px">🔒</div>
+      <h3 style="color:#4A6572">Función próximamente disponible</h3>
+      <p style="color:#666;max-width:500px;margin:12px auto">
+        El Asistente IA se está integrando con Claude Haiku a través de la plataforma institucional.
+      </p>
     </div>
   </div>
 </div>
@@ -428,24 +403,6 @@ Puedo ayudarte a:
 
 <!-- ═══ TAB: CONFIG ═══ -->
 <div id="tab-config" class="hidden">
-
-  <!-- CLAVE DE SEGURIDAD -->
-  <div class="card">
-    <div class="card-head"><h2>🔐 Clave de seguridad</h2></div>
-    <div class="card-body">
-      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
-        Esta clave se pide para <strong>borrar o editar</strong> evaluaciones, eventos de convivencia y registros de alumnos.
-        Protege contra cambios accidentales y asegura que solo personal autorizado pueda modificar datos.
-        Si no configurás clave, las acciones quedan sin protección.
-      </p>
-      <div id="claveStatus" style="margin-bottom:10px"></div>
-      <div class="row">
-        <input class="inp" id="inputClave" type="password" placeholder="Nueva clave (mínimo 4 caracteres)" style="width:200px">
-        <button class="btn btn-pri btn-sm" onclick="setClave()">🔐 Establecer clave</button>
-        <button class="btn btn-red btn-sm" onclick="removeClave()">🔓 Quitar clave</button>
-      </div>
-    </div>
-  </div>
 
   <!-- PROMOCIÓN DE GRADO -->
   <div class="card">
@@ -510,20 +467,77 @@ const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 let sb = null;
 let modoOnline = false;
-let usuarioLog = null;   // sesion de auth
-let usuarioActual = null; // { id, email, nombre, rol, nivel, grado }
+let usuarioLog = null;
+let usuarioActual = null;
 
 try {
   if (window.supabase && window.supabase.createClient) {
     sb = window.supabase.createClient(SB_URL, SB_KEY);
     modoOnline = true;
-    console.log('✓ Supabase inicializado correctamente');
+    console.log('✓ Supabase inicializado correctamente — GEI');
   } else {
     console.warn('⚠ Librería Supabase no se cargó — modo offline (localStorage)');
   }
 } catch(e) {
   console.error('Error inicializando Supabase:', e);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// MIGRACIÓN v3.1 — Limpieza automática de datos viejos del GEI (localStorage)
+// Se ejecuta UNA sola vez al cargar la versión nueva en cada navegador.
+// Los datos reales ahora viven en Supabase, no se necesita más localStorage.
+// IMPORTANTE: NO toca nada de Convivencia AEC (que vive en otro dominio).
+// ════════════════════════════════════════════════════════════════════════════
+(function limpiezaMigracion31() {
+  const FLAG_MIGRACION = 'gei_migrado_v3.1';
+  if (localStorage.getItem(FLAG_MIGRACION) === 'ok') {
+    return; // Ya se hizo la migración, no repetir
+  }
+  
+  // Lista de claves viejas del GEI a eliminar
+  const clavesGEIaBorrar = [
+    'gei_alumnos',
+    'gei_evaluaciones',
+    'gei_llamados',
+    'gei_convEventos',      // registros de convivencia internos del GEI (duplicados)
+    'gei_docentes',
+    'gei_docenteACargo',
+    'gei_histPromociones',
+    'gei_registroCambios',  // auditoría vieja (ahora va a tabla auditoria de Supabase)
+    'gei_claveSeguridad',   // clave propia eliminada
+    'gei_apiKey',           // API key individual eliminada (Haiku será institucional)
+    'gei_nextDocId',
+    'gei_aps',
+    'gei_nextId',
+    'gei_nextEvalId',
+    'gei_nextConvId',
+    'gei_gradoActual',
+    'gei_periodoActual'
+  ];
+  
+  let borrados = 0;
+  clavesGEIaBorrar.forEach(clave => {
+    if (localStorage.getItem(clave) !== null) {
+      localStorage.removeItem(clave);
+      borrados++;
+    }
+  });
+  
+  // Marcar la migración como hecha para no repetir
+  localStorage.setItem(FLAG_MIGRACION, 'ok');
+  localStorage.setItem('gei_fecha_migracion', new Date().toISOString());
+  
+  console.log('🧹 Migración v3.1 completada: ' + borrados + ' claves viejas eliminadas del localStorage del GEI');
+  console.log('ℹ Los datos ahora viven en Supabase. Convivencia AEC NO fue tocada.');
+})();
+
+// ════════════════════════════════════════════════════════════════════════════
+// STUBS TEMPORALES — Se reemplazan en PASO 3.3 con lectura real desde Supabase
+// ════════════════════════════════════════════════════════════════════════════
+let convEventos = [];  // vacío por ahora - en PASO 3.3 leerá de tabla registros/reconocimientos de Convivencia AEC
+function notaConvivencia(alId, grado, periodo){ return null; }
+function convCalificacion(nota){ return "—"; }
+function convEventosAlumno(alId, grado, periodo){ return []; }
 
 // ════════════════════════════════════════════════════════════════════════════
 // ESTADO
@@ -541,7 +555,7 @@ const MATERIAS_DEFAULT=["Catequesis","Ciencias Naturales","Ciencias Sociales",
   "Lengua Extranjera - Inglés","Matemática"];
 const APS_DEFAULT={};
 MATERIAS_DEFAULT.forEach(m=>APS_DEFAULT[m]=[]);
-APS_DEFAULT["Convivencia"]=["Respeto","Participación","Responsabilidad","Solidaridad"];
+
 
 function ls(k,d){try{const v=localStorage.getItem("gei_"+k);return v?JSON.parse(v):d;}catch{return d;}}
 function sv(k,v){try{localStorage.setItem("gei_"+k,JSON.stringify(v));}catch{}}
@@ -549,19 +563,16 @@ function sv(k,v){try{localStorage.setItem("gei_"+k,JSON.stringify(v));}catch{}}
 let alumnos    = ls("alumnos",[]);
 let evaluaciones = ls("evaluaciones",[]); // [{id,materia,grado,periodo,tipo,subtipo,descripcion,fecha,ap,notas:{alId:nota},ausentes:[alId]}]
 let llamados   = ls("llamados",{});
-let convEventos = ls("convEventos",[]); // [{id,alumnoId,grado,periodo,fecha,categoria,tipo,descripcion}]
 let docentes   = ls("docentes",[]);    // [{id,nombre,asignaciones:[{materia,grado}]}]
 let docenteACargo = ls("docenteACargo",{}); // {grado: docenteId}
 let histPromociones = ls("histPromociones",[]); // [{fecha,grado,accion,alumnoId,alumnoNombre,gradoOrigen,gradoDestino}]
 let registroCambios = ls("registroCambios",[]); // [{fecha,hora,accion,detalle,motivo}]
-let claveSeguridad = ls("claveSeguridad",""); // clave simple almacenada
 let nextDocId  = ls("nextDocId",1);
 let aps        = ls("aps",APS_DEFAULT);
 let apsLocal   = JSON.parse(JSON.stringify(aps));
 let areaEdActual = Object.keys(aps)[0];
 let nextId     = ls("nextId",1);
 let nextEvalId = ls("nextEvalId",1);
-let nextConvId = ls("nextConvId",1);
 let gradoActual = ls("gradoActual","7°");
 let periodoActual = ls("periodoActual",PERIODOS[0]);
 let materiaActual = null;
@@ -571,11 +582,11 @@ let gradoAlumnos = "7°";
 
 function guardarTodo(){
   sv("alumnos",alumnos);sv("evaluaciones",evaluaciones);sv("llamados",llamados);
-  sv("convEventos",convEventos);sv("aps",aps);sv("nextId",nextId);
+  sv("aps",aps);sv("nextId",nextId);
   sv("docentes",docentes);sv("docenteACargo",docenteACargo);sv("nextDocId",nextDocId);
-  sv("histPromociones",histPromociones);sv("claveSeguridad",claveSeguridad);
+  sv("histPromociones",histPromociones);
   sv("registroCambios",registroCambios);
-  sv("nextEvalId",nextEvalId);sv("nextConvId",nextConvId);
+  sv("nextEvalId",nextEvalId);
   sv("gradoActual",gradoActual);sv("periodoActual",periodoActual);
   const nEv=evaluaciones.length;const nAl=alumnos.length;const nConv=convEventos.length;
   const elHS=document.getElementById("headerStats");
@@ -633,42 +644,17 @@ function promedioAlumnoMatAnual(alId,materia,grado){
   return round2(vals.reduce((a,b)=>a+b,0)/vals.length);
 }
 function promedioGeneralAlumno(alId,grado,periodo){
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const vals=mats.map(m=>promedioAlumnoMatPer(alId,m,grado,periodo)).filter(v=>v!==null);
   if(!vals.length)return null;
   return round2(vals.reduce((a,b)=>a+b,0)/vals.length);
 }
-function convivencia(n){return n===0?10:n===1?7:4;}
+
 
 // Convivencia calculada desde eventos registrados
-const CONV_CATEGORIAS=["Respeto","Participación","Responsabilidad","Solidaridad"];
-const CONV_TIPOS=[
-  {id:"positivo",label:"Positivo",emoji:"✅",color:"var(--green)"},
-  {id:"negativo",label:"Negativo / Llamado",emoji:"⚠️",color:"var(--red)"},
-  {id:"observacion",label:"Observación",emoji:"📝",color:"var(--orange)"}
-];
-function convEventosAlumno(alId,grado,periodo){
-  return convEventos.filter(e=>e.alumnoId===alId&&e.grado===grado&&e.periodo===periodo);
-}
-function notaConvivencia(alId,grado,periodo){
-  const evs=convEventosAlumno(alId,grado,periodo);
-  if(!evs.length){
-    // fallback a los llamados manuales viejos
-    const ll=llamados[alId]||0;
-    return ll===0?10:ll===1?7:4;
-  }
-  const negativos=evs.filter(e=>e.tipo==='negativo').length;
-  const positivos=evs.filter(e=>e.tipo==='positivo').length;
-  // Base 10, -1.5 por cada negativo, +0.5 por cada positivo, mín 1, máx 10
-  let nota=10 - (negativos*1.5) + (positivos*0.5);
-  return round2(Math.max(1,Math.min(10,nota)));
-}
-function convCalificacion(nota){
-  if(nota>=9)return{label:"MB",cls:"badge-blue"};
-  if(nota>=7)return{label:"B",cls:"badge-green"};
-  if(nota>=4)return{label:"R",cls:"badge-orange"};
-  return{label:"I",cls:"badge-red"};
-}
+
+
+
 
 // ════════════════════════════════════════════════════════════════════════════
 // TABS
@@ -694,7 +680,7 @@ function showTab(t){
   if(t==='docentes')renderDocentes();
   if(t==='informes')renderInformeAlumnoList();
   if(t==='auditoria')renderAuditoria();
-  if(t==='config'){apsLocal=JSON.parse(JSON.stringify(aps));renderAreaList();renderAPPanel();renderClaveStatus();renderHistorialPromociones();}
+  if(t==='config'){apsLocal=JSON.parse(JSON.stringify(aps));renderAreaList();renderAPPanel();renderHistorialPromociones();}
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -709,7 +695,7 @@ function renderCursadas(){
   if(elCT) elCT.textContent=`📚 Cursadas · ${periodoActual} 2026`;
   const elCL=document.getElementById('cursadasList');
   if(!elCL)return;
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const fils=alumnos.filter(a=>a.grado===gradoActual);
   if(!fils.length){
     elCL.innerHTML=`<div class="empty"><div class="empty-icon">📚</div>No hay alumnos en ${gradoActual} grado. Importá o agregá alumnos en la pestaña "Alumnos".</div>`;
@@ -734,17 +720,10 @@ function renderCursadas(){
       <td class="center"><button class="btn btn-pri btn-sm" onclick="abrirMateria('${escH(mat)}')">📋 Ver</button></td>
     </tr>`;
   });
-  // Convivencia
-  const mb=fils.filter(al=>notaConvivencia(al.id,gradoActual,periodoActual)>=9).length;
-  const b=fils.filter(al=>{const c=notaConvivencia(al.id,gradoActual,periodoActual);return c>=7&&c<9}).length;
-  const r=fils.filter(al=>notaConvivencia(al.id,gradoActual,periodoActual)<7).length;
-  const totalConvEvs=convEventos.filter(e=>e.grado===gradoActual&&e.periodo===periodoActual).length;
-  html+=`<tr style="background:#fffbf0"><td><strong>🤝 Convivencia</strong></td><td class="center">${totalConvEvs} eventos</td><td class="center">${fils.length}</td>
-    <td class="center">MB: ${mb} · B: ${b} · R: ${r}</td><td class="center" style="color:var(--green)">${mb+b}</td>
-    <td class="center" style="color:var(--red)">${r}</td><td class="center"><button class="btn btn-orange btn-sm" onclick="document.querySelector('#tab-cursadas .card:nth-child(3)').scrollIntoView({behavior:'smooth'})">Ver ↓</button></td></tr>`;
+
   html+='</tbody></table>';
   elCL.innerHTML=html;
-  renderConvivencia();
+  
 }
 
 function abrirMateria(mat){
@@ -759,216 +738,17 @@ function cerrarDetalle(){document.getElementById('materiaDetalle').style.display
 // ════════════════════════════════════════════════════════════════════════════
 // CONVIVENCIA
 // ════════════════════════════════════════════════════════════════════════════
-function renderConvivencia(){
-  const elPL=document.getElementById('convPerLabel');
-  if(elPL) elPL.textContent=periodoActual;
-  const elRes=document.getElementById('convResumen');
-  const elEvs=document.getElementById('convEventos');
-  if(!elRes||!elEvs)return;
-  const fils=alumnos.filter(a=>a.grado===gradoActual);
-  const evs=convEventos.filter(e=>e.grado===gradoActual&&e.periodo===periodoActual);
 
-  // Resumen por alumno
-  if(!fils.length){
-    document.getElementById('convResumen').innerHTML=`<div class="empty" style="padding:10px">Sin alumnos en ${gradoActual}.</div>`;
-    document.getElementById('convEventos').innerHTML='';
-    return;
-  }
-  let resHtml=`<table><thead><tr><th>Alumno/a</th>
-    ${CONV_CATEGORIAS.map(c=>`<th class="center" style="font-size:11px">${c}</th>`).join('')}
-    <th class="center">✅ Pos.</th><th class="center">⚠️ Neg.</th><th class="center">📝 Obs.</th>
-    <th class="center">Nota</th><th class="center">Calif.</th></tr></thead><tbody>`;
-  fils.forEach(al=>{
-    const evsAl=convEventosAlumno(al.id,gradoActual,periodoActual);
-    const porCat={};CONV_CATEGORIAS.forEach(c=>porCat[c]={pos:0,neg:0,obs:0});
-    let totalPos=0,totalNeg=0,totalObs=0;
-    evsAl.forEach(e=>{
-      if(porCat[e.categoria]){
-        if(e.tipo==='positivo')porCat[e.categoria].pos++;
-        if(e.tipo==='negativo')porCat[e.categoria].neg++;
-        if(e.tipo==='observacion')porCat[e.categoria].obs++;
-      }
-      if(e.tipo==='positivo')totalPos++;
-      if(e.tipo==='negativo')totalNeg++;
-      if(e.tipo==='observacion')totalObs++;
-    });
-    const nota=notaConvivencia(al.id,gradoActual,periodoActual);
-    const cal=convCalificacion(nota);
-    resHtml+=`<tr><td><strong>${escH(al.nombre)}</strong></td>
-      ${CONV_CATEGORIAS.map(c=>{
-        const d=porCat[c];
-        const txt=[];
-        if(d.pos)txt.push(`<span style="color:var(--green)">+${d.pos}</span>`);
-        if(d.neg)txt.push(`<span style="color:var(--red)">-${d.neg}</span>`);
-        if(d.obs)txt.push(`<span style="color:var(--orange)">${d.obs}</span>`);
-        return`<td class="center" style="font-size:11px">${txt.join(' ')||'—'}</td>`;
-      }).join('')}
-      <td class="center" style="color:var(--green);font-weight:600">${totalPos||'—'}</td>
-      <td class="center" style="color:var(--red);font-weight:600">${totalNeg||'—'}</td>
-      <td class="center" style="color:var(--orange);font-weight:600">${totalObs||'—'}</td>
-      <td class="center"><span class="nota-badge ${notaCls(nota)}">${formatN(nota)}</span></td>
-      <td class="center"><span class="badge ${cal.cls}">${cal.label}</span></td>
-    </tr>`;
-  });
-  resHtml+=`</tbody></table>`;
-  document.getElementById('convResumen').innerHTML=resHtml;
 
-  // Lista de eventos recientes
-  const evsRecientes=evs.sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,20);
-  if(!evsRecientes.length){
-    document.getElementById('convEventos').innerHTML=`<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px">No hay eventos registrados en este período. Usá el botón <strong>"+ Registrar evento"</strong> para comenzar.</div>`;
-    return;
-  }
-  let evHtml=`<div style="margin-top:12px"><h3 style="font-size:13px;color:var(--pri);margin-bottom:8px">Últimos eventos registrados</h3>`;
-  evsRecientes.forEach(ev=>{
-    const al=alumnos.find(a=>a.id===ev.alumnoId);
-    const tipoInfo=CONV_TIPOS.find(t=>t.id===ev.tipo)||CONV_TIPOS[0];
-    evHtml+=`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
-      <span style="min-width:70px;color:var(--text3)">${ev.fecha}</span>
-      <span style="color:${tipoInfo.color};font-weight:600;min-width:20px">${tipoInfo.emoji}</span>
-      <strong style="min-width:140px">${al?escH(al.nombre):'?'}</strong>
-      <span class="badge badge-blue" style="font-size:10px">${ev.categoria}</span>
-      <span style="flex:1;color:var(--text2)">${escH(ev.descripcion||'')}</span>
-      <button class="btn btn-pri btn-xs" onclick="editarConvEvento(${ev.id})" title="Editar">✏️</button>
-      <button class="btn btn-red btn-xs" onclick="eliminarConvEvento(${ev.id})" title="Eliminar">✕</button>
-    </div>`;
-  });
-  evHtml+=`</div>`;
-  document.getElementById('convEventos').innerHTML=evHtml;
-}
 
-function eliminarConvEvento(id){
-  const evC=convEventos.find(e=>e.id===id);
-  const descC=evC?`Eliminar evento convivencia: ${evC.tipo} - alumno ID ${evC.alumnoId} (${evC.fecha})`:'Eliminar evento';
-  accionProtegida(()=>{
-    if(!confirm('¿Eliminar este evento?'))return;
-    const ev=convEventos.find(e=>e.id===id);
-    if(ev&&ev.tipo==='negativo'){llamados[ev.alumnoId]=Math.max(0,(llamados[ev.alumnoId]||0)-1);}
-    convEventos=convEventos.filter(e=>e.id!==id);guardarTodo();renderConvivencia();
-  }, descC);
-}
 
-function editarConvEvento(id){
-  accionProtegida(()=>{
-    const ev=convEventos.find(e=>e.id===id);if(!ev)return;
-  const al=alumnos.find(a=>a.id===ev.alumnoId);
-  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-  <div class="modal" style="max-width:550px"><div class="modal-head" style="background:var(--orange)"><h3>✏️ Editar evento de convivencia</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div style="margin-bottom:10px;font-weight:600;color:var(--pri)">${al?escH(al.nombre):'Alumno desconocido'}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Fecha</label>
-        <input type="date" class="inp" id="ece_fecha" value="${ev.fecha}" style="width:100%"></div>
-      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Categoría</label>
-        <select class="sel" id="ece_cat" style="width:100%">
-          ${CONV_CATEGORIAS.map(c=>`<option${ev.categoria===c?' selected':''}>${c}</option>`).join('')}
-        </select></div>
-      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Tipo</label>
-        <select class="sel" id="ece_tipo" style="width:100%">
-          ${CONV_TIPOS.map(t=>`<option value="${t.id}"${ev.tipo===t.id?' selected':''}>${t.emoji} ${t.label}</option>`).join('')}
-        </select></div>
-      <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Descripción</label>
-        <input class="inp" id="ece_desc" value="${escH(ev.descripcion||'')}" style="width:100%"></div>
-    </div>
-    <div style="margin-top:14px;display:flex;justify-content:space-between">
-      <button class="btn btn-red btn-sm" onclick="eliminarConvEvento(${id});this.closest('.modal-overlay').remove()">🗑️ Eliminar</button>
-      <button class="btn btn-green" onclick="guardarEdicionConv(${id})">💾 Guardar cambios</button>
-    </div>
-  </div></div></div>`;
-  document.body.insertAdjacentHTML('beforeend',html);
-  }); // fin accionProtegida editarConv
-}
 
-function guardarEdicionConv(id){
-  const ev=convEventos.find(e=>e.id===id);if(!ev)return;
-  const tipoAnterior=ev.tipo;
-  ev.fecha=document.getElementById('ece_fecha').value;
-  ev.categoria=document.getElementById('ece_cat').value;
-  ev.tipo=document.getElementById('ece_tipo').value;
-  ev.descripcion=document.getElementById('ece_desc').value.trim();
-  // Ajustar llamados si cambió el tipo
-  if(tipoAnterior==='negativo'&&ev.tipo!=='negativo'){llamados[ev.alumnoId]=Math.max(0,(llamados[ev.alumnoId]||0)-1);}
-  if(tipoAnterior!=='negativo'&&ev.tipo==='negativo'){llamados[ev.alumnoId]=(llamados[ev.alumnoId]||0)+1;}
-  guardarTodo();
-  document.querySelector('.modal-overlay').remove();
-  renderConvivencia();
-}
 
-function abrirNuevoEventoConv(){
-  const fils=alumnos.filter(a=>a.grado===gradoActual);
-  if(!fils.length){alert('No hay alumnos en '+gradoActual+'. Agregá alumnos primero.');return;}
-  const today=new Date().toISOString().split('T')[0];
-  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-  <div class="modal" style="max-width:600px"><div class="modal-head" style="background:var(--orange)"><h3>🤝 Registrar evento de convivencia</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Alumno/a</label>
-        <select class="sel" id="ce_alumno" style="width:100%">
-          ${fils.map(a=>`<option value="${a.id}">${escH(a.nombre)}</option>`).join('')}
-        </select></div>
-      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Fecha</label>
-        <input type="date" class="inp" id="ce_fecha" value="${today}" style="width:100%"></div>
-      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Categoría</label>
-        <select class="sel" id="ce_categoria" style="width:100%">
-          ${CONV_CATEGORIAS.map(c=>`<option>${c}</option>`).join('')}
-        </select></div>
-      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tipo de evento</label>
-        <select class="sel" id="ce_tipo" style="width:100%">
-          ${CONV_TIPOS.map(t=>`<option value="${t.id}">${t.emoji} ${t.label}</option>`).join('')}
-        </select></div>
-    </div>
-    <div style="margin-top:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Descripción del evento</label>
-      <input class="inp" id="ce_desc" placeholder="Ej: Faltó el respeto a un compañero durante la clase" style="width:100%"></div>
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px">
-        <input type="checkbox" id="ce_multiple"> Registrar para varios alumnos a la vez
-      </label>
-    </div>
-    <div id="ce_multipleList" style="display:none;margin-top:8px;max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px">
-      ${fils.map(a=>`<label style="display:block;font-size:12px;padding:2px 0"><input type="checkbox" value="${a.id}" class="ce_multi_check"> ${escH(a.nombre)}</label>`).join('')}
-    </div>
-    <div style="margin-top:16px;text-align:right"><button class="btn btn-orange" onclick="crearConvEvento()">Registrar evento</button></div>
-  </div></div></div>`;
-  document.body.insertAdjacentHTML('beforeend',html);
-  document.getElementById('ce_multiple').onchange=function(){
-    document.getElementById('ce_multipleList').style.display=this.checked?'block':'none';
-    document.getElementById('ce_alumno').disabled=this.checked;
-  };
-}
 
-function crearConvEvento(){
-  const fecha=document.getElementById('ce_fecha').value;
-  const categoria=document.getElementById('ce_categoria').value;
-  const tipo=document.getElementById('ce_tipo').value;
-  const desc=document.getElementById('ce_desc').value.trim();
-  const multiple=document.getElementById('ce_multiple').checked;
 
-  let alumnoIds=[];
-  if(multiple){
-    document.querySelectorAll('.ce_multi_check:checked').forEach(cb=>alumnoIds.push(parseInt(cb.value)));
-    if(!alumnoIds.length){alert('Seleccioná al menos un alumno.');return;}
-  }else{
-    alumnoIds=[parseInt(document.getElementById('ce_alumno').value)];
-  }
 
-  alumnoIds.forEach(alId=>{
-    convEventos.push({
-      id:nextConvId++,
-      alumnoId:alId,
-      grado:gradoActual,
-      periodo:periodoActual,
-      fecha,categoria,tipo,
-      descripcion:desc
-    });
-    // Actualizar llamados para compatibilidad
-    if(tipo==='negativo'){llamados[alId]=(llamados[alId]||0)+1;}
-  });
 
-  guardarTodo();
-  document.querySelector('.modal-overlay').remove();
-  renderConvivencia();
-  renderCursadas();
-}
+
 
 function renderEvalList(){
   if(!materiaActual)return;
@@ -1014,7 +794,7 @@ function eliminarEval(id){
 // MODAL: NUEVA EVALUACIÓN
 // ════════════════════════════════════════════════════════════════════════════
 function abrirNuevaEval(){
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const apsList=materiaActual?(aps[materiaActual]||[]):[];
   const today=new Date().toISOString().split('T')[0];
   let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
@@ -1077,7 +857,7 @@ function abrirCargarNotas(evalId){
   const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
   const fils=alumnos.filter(a=>a.grado===ev.grado).sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const tipoInfo=TIPOS_EVAL.find(t=>t.id===ev.tipo)||TIPOS_EVAL[0];
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const apsl=aps[ev.materia]||[];
   let html=`<div class="modal-overlay" id="modalNotas" onclick="if(event.target===this)cerrarModalNotas()">
   <div class="modal"><div class="modal-head"><h3>📝 ${escH(ev.descripcion||ev.subtipo)}</h3><button class="modal-close" onclick="cerrarModalNotas()">✕</button></div>
@@ -1282,7 +1062,7 @@ function descargarPlantillaAlumnos(){
 // ════════════════════════════════════════════════════════════════════════════
 function renderDocentes(){
   // Llenar select de materia para agregar
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   document.getElementById('nuevoDocMateria').innerHTML=`<option value="">— Materia (opcional) —</option>`+mats.map(m=>`<option>${m}</option>`).join('');
 
   if(!docentes.length){
@@ -1331,7 +1111,7 @@ function eliminarDocente(id){
 
 function editarDocente(id){
   const doc=docentes.find(d=>d.id===id);if(!doc)return;
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const asigs=doc.asignaciones||[];
   let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
   <div class="modal" style="max-width:650px"><div class="modal-head"><h3>👩‍🏫 ${escH(doc.nombre)} — Asignaciones</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
@@ -1397,7 +1177,7 @@ function showMsgDoc(m,t){const el=document.getElementById('importMsgDoc');el.sty
 
 function descargarPlantillaDocentes(){
   const wb=XLSX.utils.book_new();
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const ws=XLSX.utils.aoa_to_sheet([
     ["Nombre","Materia","Grado"],
     ["García, María","Matemática","7°"],
@@ -1423,7 +1203,7 @@ function renderInforme(){
   const al=alumnos.find(a=>a.id===alId);
   if(!al){document.getElementById('informeContent').innerHTML=`<div class="empty"><div class="empty-icon">📊</div>Seleccioná un alumno.</div>`;return;}
   const g=al.grado;
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const ll=llamados[al.id]||0;
 
   // Stats generales
@@ -1442,7 +1222,7 @@ function renderInforme(){
     html+=`<div class="stat-card"><div class="stat-val" style="color:${notaColor(prom)}">${formatN(prom)}</div><div class="stat-label">${p}</div></div>`;
   });
   html+=`<div class="stat-card"><div class="stat-val" style="color:${ll>0?'var(--red)':'var(--green)'}">${ll}</div><div class="stat-label">Llamados de atención</div></div>`;
-  html+=`<div class="stat-card"><div class="stat-val" style="color:${notaColor(convivencia(ll))}">${notaConvivencia(al.id,g,PERIODOS[0])}</div><div class="stat-label">Convivencia 1° Per.</div></div>`;
+  html+=``;
   html+=`</div>`;
 
   // Detalle por materia
@@ -1539,7 +1319,7 @@ function exportarInformeExcel(){
   const alId=parseInt(document.getElementById('infAlumno').value);
   const al=alumnos.find(a=>a.id===alId);if(!al)return;
   const wb=XLSX.utils.book_new();
-  const mats=Object.keys(aps).filter(m=>m!=="Convivencia");
+  const mats=Object.keys(aps);
   const rows=[["INFORME DE RENDIMIENTO"],["Alumno:",al.nombre],["Grado:",al.grado],["Año:","2026"],[""]];
   mats.forEach(mat=>{
     rows.push([mat]);
@@ -1566,52 +1346,9 @@ function exportarInformeExcel(){
 // CHAT IA
 // ════════════════════════════════════════════════════════════════════════════
 function setSug(t){document.getElementById('chatInput').value=t;}
-async function enviarChat(){
-  const inp=document.getElementById('chatInput');const msg=inp.value.trim();
-  if(!msg||chatLoading)return;inp.value='';chatLoading=true;document.getElementById('btnEnviar').disabled=true;
-  appendMsg('user',msg);
-  const mats=Object.keys(aps).filter(m=>m!=='Convivencia');
-  const sys=`Sos un asistente docente del nivel primario de Mendoza (Res. 1949-DGE-22/Res. 3556-DGE-2019). Notas de 0 a 10 con decimales.
-Alumnos: ${alumnos.slice(0,30).map(a=>`ID:${a.id} ${a.nombre}(${a.grado})`).join(" | ")}
-Evaluaciones recientes: ${evaluaciones.slice(-10).map(e=>`${e.materia}/${e.periodo}/${e.subtipo}(${e.fecha})`).join(" | ")||"Ninguna"}
-Llamados: ${Object.entries(llamados).filter(([,n])=>n>0).map(([id,n])=>`ID${id}:${n}`).join(" | ")||"Ninguno"}
-Materias: ${mats.join(", ")}
-Períodos: ${PERIODOS.join(", ")}
-Si el docente pide cargar una nota, respondé confirmando y agregá al final: ACCION_JSON: {"tipo":"cargar_nota","datos":{"alumnoId":X,"materia":"...","periodo":"...","nota":N}}
-Si pide registrar llamado: ACCION_JSON: {"tipo":"registrar_llamado","datos":{"alumnoId":X,"motivo":"..."}}
-Respondé en español, breve y claro.`;
-  try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:msg}]})});
-    const data=await res.json();
-    let texto=data.content?.map(b=>b.text||"").join("")||"Sin respuesta.";
-    const match=texto.match(/ACCION_JSON:\s*(\{[\s\S]*?\})/);
-    if(match){try{ejecutarAccion(JSON.parse(match[1]));}catch{}}
-    texto=texto.replace(/ACCION_JSON:[\s\S]*$/,"").trim();
-    appendMsg('bot',texto);
-  }catch{appendMsg('bot','Error de conexión.');}
-  chatLoading=false;document.getElementById('btnEnviar').disabled=false;
-}
-function appendMsg(tipo,texto){
-  const box=document.getElementById('chatMsgs');const div=document.createElement('div');
-  div.className=tipo==='user'?'msg-user':'msg-bot';
-  div.innerHTML=tipo==='bot'?`<div class="msg-label">🤖 Asistente</div><div class="bubble-bot">${escH(texto)}</div>`:`<div class="bubble-user">${escH(texto)}</div>`;
-  box.appendChild(div);box.scrollTop=box.scrollHeight;
-}
-function ejecutarAccion(a){
-  if(a.tipo==="cargar_nota"){
-    const{alumnoId,materia,periodo,nota}=a.datos||{};
-    if(!alumnoId||!materia||!periodo||nota===undefined)return;
-    // Create a "cierre" evaluation with the note
-    let ev=evaluaciones.find(e=>e.materia===materia&&e.grado===alumnos.find(al=>al.id===alumnoId)?.grado&&e.periodo===periodo&&e.tipo==='cierre');
-    if(!ev){ev={id:nextEvalId++,materia,grado:alumnos.find(al=>al.id===alumnoId)?.grado||gradoActual,periodo,tipo:'cierre',subtipo:'Cierre de período',descripcion:'Nota cargada por asistente IA',fecha:new Date().toISOString().split('T')[0],ap:'',notas:{},ausentes:[]};evaluaciones.push(ev);}
-    ev.notas[alumnoId]=round2(parseFloat(nota));
-    guardarTodo();
-  }
-  if(a.tipo==="registrar_llamado"){
-    const{alumnoId}=a.datos||{};if(alumnoId){llamados[alumnoId]=(llamados[alumnoId]||0)+1;guardarTodo();}
-  }
-}
+async 
+
+
 
 // ════════════════════════════════════════════════════════════════════════════
 // AUDITORÍA
@@ -1649,59 +1386,16 @@ function imprimirAuditoria(){
 // ════════════════════════════════════════════════════════════════════════════
 // CLAVE DE SEGURIDAD
 // ════════════════════════════════════════════════════════════════════════════
-function setClave(){
-  const c=document.getElementById('inputClave').value;
-  if(!c||c.length<4){alert('La clave debe tener al menos 4 caracteres.');return;}
-  claveSeguridad=c;guardarTodo();
-  document.getElementById('inputClave').value='';
-  renderClaveStatus();
-  alert('✅ Clave establecida correctamente.');
-}
-function removeClave(){
-  if(claveSeguridad){
-    accionProtegida(()=>{claveSeguridad='';guardarTodo();renderClaveStatus();alert('🔓 Clave eliminada.');},'Quitar clave de seguridad');
-  }else{alert('No hay clave configurada.');}
-}
-function renderClaveStatus(){
-  const el=document.getElementById('claveStatus');
-  if(!el)return;
-  el.innerHTML=claveSeguridad
-    ?'<span class="badge badge-green">🔐 Clave activa — Las acciones de borrar/editar están protegidas</span>'
-    :'<span class="badge badge-orange">🔓 Sin clave — Cualquiera puede borrar o editar registros</span>';
-}
+
+
+
 function accionProtegida(callback, descripcionAccion){
-  if(!claveSeguridad){
-    // Sin clave configurada: pedir solo motivo
-    pedirMotivo(descripcionAccion||'Acción sin descripción', (motivo)=>{
-      registrarCambio(descripcionAccion||'Acción', motivo);
-      callback();
-    });
-    return;
-  }
-  // Con clave: pedir clave + motivo
-  const html=`<div class="modal-overlay" id="modalClave" onclick="if(event.target===this)this.remove()">
-  <div class="modal" style="max-width:450px"><div class="modal-head" style="background:var(--red)"><h3>🔐 Autorización requerida</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <p style="font-size:12px;color:var(--text2);margin-bottom:4px"><strong>Acción:</strong> ${escH(descripcionAccion||'Modificar registro')}</p>
-    <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
-    <div style="margin-bottom:12px">
-      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">🔐 Clave de seguridad</label>
-      <input type="password" class="inp" id="inputClaveCheck" placeholder="Ingresá la clave" style="width:100%" onkeydown="if(event.key==='Enter')document.getElementById('inputMotivoCheck').focus()">
-    </div>
-    <div style="margin-bottom:12px">
-      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">📝 Motivo del cambio <span style="color:var(--red)">*</span></label>
-      <input class="inp" id="inputMotivoCheck" placeholder="Ej: Error en la carga de nota / Decisión de dirección / Corrección..." style="width:100%" onkeydown="if(event.key==='Enter')verificarClave()">
-    </div>
-    <div id="claveError" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
-    <div style="text-align:right">
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('modalClave').remove()" style="margin-right:8px">Cancelar</button>
-      <button class="btn btn-pri" onclick="verificarClave()">✅ Autorizar</button>
-    </div>
-  </div></div></div>`;
-  document.body.insertAdjacentHTML('beforeend',html);
-  document.getElementById('inputClaveCheck').focus();
-  window._claveCallback=callback;
-  window._claveDescripcion=descripcionAccion||'Acción';
+  // Versión simplificada: pide motivo y ejecuta.
+  // La seguridad real se delega a los roles de Supabase (RLS policies).
+  pedirMotivo(descripcionAccion || 'Acción sin descripción', (motivo)=>{
+    registrarCambio(descripcionAccion || 'Acción', motivo);
+    callback();
+  });
 }
 
 function pedirMotivo(descripcionAccion, callback){
@@ -1731,22 +1425,7 @@ function confirmarMotivo(){
   if(window._motivoCallback){window._motivoCallback(motivo);window._motivoCallback=null;}
 }
 
-function verificarClave(){
-  const inp=document.getElementById('inputClaveCheck');
-  const motivo=document.getElementById('inputMotivoCheck').value.trim();
-  if(inp.value!==claveSeguridad){
-    document.getElementById('claveError').textContent='❌ Clave incorrecta.';
-    document.getElementById('claveError').style.display='block';
-    inp.value='';inp.focus();return;
-  }
-  if(!motivo){
-    document.getElementById('claveError').textContent='⚠️ Debés escribir un motivo del cambio.';
-    document.getElementById('claveError').style.display='block';return;
-  }
-  document.getElementById('modalClave').remove();
-  registrarCambio(window._claveDescripcion||'Acción', motivo);
-  if(window._claveCallback){window._claveCallback();window._claveCallback=null;}
-}
+
 
 function registrarCambio(accion, motivo){
   const ahora=new Date();
@@ -2026,7 +1705,7 @@ function showMsg(m,t){const el=document.getElementById('importMsg');el.style.dis
 // ════════════════════════════════════════════════════════════════════════════
 document.getElementById('gGrado').value=gradoActual;
 renderPerTabs();renderCursadas();guardarTodo();
-renderClaveStatus();renderHistorialPromociones();
+renderHistorialPromociones();
 </script>
 </body>
 </html>
