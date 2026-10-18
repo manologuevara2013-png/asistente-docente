@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Asistente Docente GEI – Mendoza</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--pri:#4A6572;--pri-d:#3a5462;--green:#4CAF50;--orange:#FF9800;--red:#F44336;--blue:#1976D2;--purple:#9C27B0;--bg:#f0f2f5;--card:#fff;--border:#e0e0e0;--text:#333;--text2:#666;--text3:#999;--radius:10px}
@@ -501,6 +502,29 @@ Puedo ayudarte a:
 </div><!-- /page -->
 
 <script>
+// ════════════════════════════════════════════════════════════════════════════
+// SUPABASE — Configuración compartida con Convivencia AEC
+// ════════════════════════════════════════════════════════════════════════════
+const SB_URL = "https://navsfrfgyyjxckmincmb.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hdnNmcmZneXlqeGNrbWluY21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MDg0ODAsImV4cCI6MjEwNDI4NDQ4MH0.IWCyH9HvskRRU6pG4e2_1BvQI84qPnSnBmiQBa_q45o";
+
+let sb = null;
+let modoOnline = false;
+let usuarioLog = null;   // sesion de auth
+let usuarioActual = null; // { id, email, nombre, rol, nivel, grado }
+
+try {
+  if (window.supabase && window.supabase.createClient) {
+    sb = window.supabase.createClient(SB_URL, SB_KEY);
+    modoOnline = true;
+    console.log('✓ Supabase inicializado correctamente');
+  } else {
+    console.warn('⚠ Librería Supabase no se cargó — modo offline (localStorage)');
+  }
+} catch(e) {
+  console.error('Error inicializando Supabase:', e);
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // ESTADO
 // ════════════════════════════════════════════════════════════════════════════
