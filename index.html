@@ -164,6 +164,11 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
   .card-body{padding:12px}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ═══ PERMISOS POR ROL ═══ */
+body.rol-docente .admin-only { display: none !important; }
+body.rol-docente .solo-lectura-banner { display: block !important; }
+.solo-lectura-banner { display:none; background:#FFF4D6; border-left:4px solid #C9A040; padding:10px 14px; margin:12px 0; border-radius:6px; font-size:13px; color:#5A4820; }
 </style>
 </head>
 <body>
@@ -267,6 +272,8 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
 <!-- ═══ TAB: ALUMNOS ═══ -->
 <div id="tab-alumnos" class="hidden">
 
+  <div class="solo-lectura-banner">👁️ <b>Modo lectura</b> — como docente podés consultar el listado de alumnos pero no modificarlo. Si necesitás dar de alta/baja un alumno, pedile a Dirección o Coordinación.</div>
+
   <!-- PASO 1: Elegir grado -->
   <div class="card">
     <div class="card-head">
@@ -286,8 +293,8 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
     </div>
   </div>
 
-  <!-- PASO 2: Cargar alumnos -->
-  <div class="card">
+  <!-- PASO 2: Cargar alumnos (solo admin/direccion/coordinador) -->
+  <div class="card admin-only">
     <div class="card-head">
       <h2 id="alTituloCarga">📂 Cargar alumnos de 7° Grado</h2>
     </div>
@@ -329,7 +336,7 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
   <div class="card">
     <div class="card-head">
       <h2 id="alTituloListado">👨‍🎓 Alumnos de 7° Grado <span id="alConteo" style="font-weight:400;font-size:13px;color:var(--text2)"></span></h2>
-      <div class="row">
+      <div class="row admin-only">
         <span style="font-size:12px;color:var(--text2);margin-right:6px">Docente a cargo:</span>
         <select class="sel" id="docenteACargo" onchange="guardarDocenteACargo()" style="min-width:180px">
           <option value="">— Sin asignar —</option>
@@ -342,7 +349,8 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
 
 <!-- ═══ TAB: DOCENTES ═══ -->
 <div id="tab-docentes" class="hidden">
-  <div class="card">
+  <div class="solo-lectura-banner">👁️ <b>Modo lectura</b> — como docente podés consultar el plantel pero no agregar ni modificar colegas. Si hay un cambio, pedile a Dirección o Coordinación.</div>
+  <div class="card admin-only">
     <div class="card-head">
       <h2>👩‍🏫 Plantel Docente</h2>
     </div>
@@ -1042,9 +1050,9 @@ function renderAlumnos(){
       <td class="center">${al.grado}</td>
       <td class="center" style="color:${ll>0?'var(--red)':'var(--text3)'}"><strong>${ll}</strong></td>
       <td class="center"><span class="nota-badge ${notaCls(cv)}">${formatN(cv)}</span> <span class="badge ${cal.cls}" style="font-size:10px">${cal.label}</span></td>
-      <td class="center">
-        <button class="btn btn-outline btn-xs" onclick="editarAlumno(${al.id})" title="Editar">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="eliminarAlumno(${al.id})" title="Eliminar">✕</button>
+      <td class="center">${esDocenteSolo() ? '<span style="color:var(--text3);font-size:11px">—</span>' : `
+        <button class="btn btn-outline btn-xs" onclick="editarAlumno('${al.id}')" title="Editar">✏️</button>
+        <button class="btn btn-red btn-xs" onclick="eliminarAlumno('${al.id}')" title="Eliminar">✕</button>`}
       </td>
     </tr>`;
   });
@@ -1116,9 +1124,9 @@ function renderDocentes(){
       <td><strong>${escH(d.nombre)}</strong></td>
       <td style="font-size:12px">${matsStr}</td>
       <td class="center">${gdsStr}</td>
-      <td class="center">
-        <button class="btn btn-pri btn-xs" onclick="editarDocente(${d.id})" title="Editar / Asignar">✏️ Asignar</button>
-        <button class="btn btn-red btn-xs" onclick="eliminarDocente(${d.id})">✕</button>
+      <td class="center">${esDocenteSolo() ? '<span style="color:var(--text3);font-size:11px">—</span>' : `
+        <button class="btn btn-pri btn-xs" onclick="editarDocente('${d.id}')" title="Editar / Asignar">✏️ Asignar</button>
+        <button class="btn btn-red btn-xs" onclick="eliminarDocente('${d.id}')">✕</button>`}
       </td>
     </tr>`;
   });
@@ -1826,8 +1834,12 @@ async function mostrarAppGEI(){
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('mainNav').style.display = 'flex';
   document.getElementById('page').style.display = '';
+  // Aplicar permisos por rol antes de renderizar
+  aplicarPermisosUI();
   // Cargar datos desde Supabase y refrescar tab actual
   await cargarDatosDesdeSupabase();
+  // Si el docente estaba viendo un tab prohibido, mandarlo a Cursadas
+  if(esDocenteSolo() && ['config','auditoria'].includes(tabActual)) tabActual = 'cursadas';
   showTab(tabActual || 'cursadas');
 }
 
@@ -1908,6 +1920,40 @@ function setHeaderConexion(texto, color){
 // Stub de compatibilidad — antes era un helper del header viejo.
 // No hace nada porque el nuevo badge lo mantiene cargarDatosDesdeSupabase().
 function updateHeaderStats(){ /* noop */ }
+
+// ════════════════════════════════════════════════════════════════════════════
+// PERMISOS POR ROL
+// ════════════════════════════════════════════════════════════════════════════
+// Helpers que leen usuarioActual.rol y responden si el usuario puede hacer algo
+function esDocenteSolo(){ return usuarioActual && usuarioActual.rol === 'docente'; }
+function esAdminDirCoord(){ return usuarioActual && ['admin','direccion','coordinador','desarrollador'].includes(usuarioActual.rol); }
+function esSoloDireccion(){ return usuarioActual && ['direccion','desarrollador'].includes(usuarioActual.rol); }
+
+// Aplica los permisos al DOM: oculta tabs y marca el body con la clase
+// correspondiente al rol para que el CSS esconda las cards admin-only.
+function aplicarPermisosUI(){
+  if(!usuarioActual) return;
+
+  // 1. Clase en el body — el CSS esconde elementos .admin-only cuando body.rol-docente
+  document.body.classList.remove('rol-docente','rol-admin','rol-direccion','rol-coordinador','rol-desarrollador');
+  document.body.classList.add('rol-' + usuarioActual.rol);
+
+  // 2. Ocultar tabs del navbar que el docente no puede ver
+  if(esDocenteSolo()){
+    document.querySelectorAll('#mainNav button').forEach(b => {
+      const txt = b.textContent.toLowerCase();
+      if(txt.includes('auditor') || txt.includes('config')){
+        b.style.display = 'none';
+      }
+    });
+    console.log('🔒 Permisos aplicados: rol docente (solo lectura en alumnos/docentes)');
+  } else {
+    // Admin/dirección/coord/desarrollador — todos los tabs visibles
+    document.querySelectorAll('#mainNav button').forEach(b => b.style.display = '');
+    console.log('🔓 Permisos aplicados: rol ' + usuarioActual.rol + ' (acceso completo)');
+  }
+}
+
 
 // Carga alumnos, materias y usuarios desde Supabase y los pone en las
 // variables locales. También refresca el header.
