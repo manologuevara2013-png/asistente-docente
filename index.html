@@ -207,7 +207,7 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
   <span class="school-label">P276 · FASTA JUAN PABLO II</span>
   <div class="header-right" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span id="headerUsuario" style="font-size:12px;color:#4A6572;font-weight:600"></span>
-    <span id="headerConexion" style="font-size:11px;color:#999">⚪ Conectando...</span>
+    <span id="headerConexion" style="font-size:11px;color:#fff;background:rgba(255,255,255,0.15);padding:3px 10px;border-radius:12px;font-weight:600">⚪ Conectando...</span>
     <button id="btnRecargar" onclick="recargarDatos()" style="padding:6px 10px;background:#2e5e3f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600" title="Recargar datos desde Supabase">🔄 Recargar</button>
     <button onclick="cerrarSesionGEI()" style="padding:6px 12px;background:#a34434;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">Cerrar sesión</button>
   </div>
@@ -1800,17 +1800,17 @@ async function cargarRolGEI(){
       'docente': '👨‍🏫'
     }[usuarioActual.rol] || '👤';
 
-    const rolColor = {
-      'desarrollador': '#6B4C93',
-      'direccion': '#a34434',
-      'admin': '#a34434',
-      'coordinador': '#2e5e3f',
-      'docente': '#1d3a5f'
-    }[usuarioActual.rol] || '#5a5346';
+    const rolBg = {
+      'desarrollador': '#8B6DB3',
+      'direccion':     '#D96F6F',
+      'admin':         '#D96F6F',
+      'coordinador':   '#4A9A6F',
+      'docente':       '#6B8FC2'
+    }[usuarioActual.rol] || '#999';
 
     document.getElementById('headerUsuario').innerHTML =
-      rolEmoji + ' <b>' + (usuarioActual.nombre || usuarioActual.email) + '</b> ' +
-      '<span style="color:' + rolColor + ';text-transform:uppercase;font-size:10px;margin-left:4px">' +
+      rolEmoji + ' <b style="color:#fff">' + (usuarioActual.nombre || usuarioActual.email) + '</b> ' +
+      '<span style="background:' + rolBg + ';color:#fff;text-transform:uppercase;font-size:10px;margin-left:6px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:0.5px">' +
       usuarioActual.rol + '</span>';
 
   } catch(e){
@@ -1888,10 +1888,21 @@ function badgesInclusion(al){
   return items.join('');
 }
 
-// Actualiza el badge de conexión del header
+// Actualiza el badge de conexión del header.
+// Mantiene el texto blanco (sobre fondo azul oscuro del header) y cambia el
+// fondo del pill según el estado — verde (online), amarillo (cargando),
+// rojo (error), transparente (idle).
 function setHeaderConexion(texto, color){
   const el = document.getElementById('headerConexion');
-  if(el){ el.textContent = texto; el.style.color = color || '#999'; }
+  if(!el) return;
+  el.textContent = texto;
+  el.style.color = '#fff';
+  // Fondo según estado — detectado por color pasado o por el emoji del texto
+  let bg = 'rgba(255,255,255,0.15)';   // default: translúcido
+  if(/🟢/.test(texto))      bg = '#4A9A6F';   // verde online
+  else if(/⏳/.test(texto)) bg = '#C9A040';   // amarillo cargando
+  else if(/🔴/.test(texto)) bg = '#D96F6F';   // rojo error
+  el.style.background = bg;
 }
 
 // Stub de compatibilidad — antes era un helper del header viejo.
