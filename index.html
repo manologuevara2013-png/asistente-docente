@@ -207,7 +207,8 @@ input.nota-inp:focus{outline:2px solid var(--blue)}
   <span class="school-label">P276 · FASTA JUAN PABLO II</span>
   <div class="header-right" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span id="headerUsuario" style="font-size:12px;color:#4A6572;font-weight:600"></span>
-    <span id="headerStats" style="font-size:11px;color:#999">💾 Guardado automático</span>
+    <span id="headerConexion" style="font-size:11px;color:#999">⚪ Conectando...</span>
+    <button id="btnRecargar" onclick="recargarDatos()" style="padding:6px 10px;background:#2e5e3f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600" title="Recargar datos desde Supabase">🔄 Recargar</button>
     <button onclick="cerrarSesionGEI()" style="padding:6px 12px;background:#a34434;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">Cerrar sesión</button>
   </div>
 </div>
@@ -1037,7 +1038,7 @@ function renderAlumnos(){
     const ll=llamados[al.id]||0;const cv=notaConvivencia(al.id,al.grado,periodoActual);const cal=convCalificacion(cv);
     html+=`<tr>
       <td class="center" style="color:var(--text3)">${i+1}</td>
-      <td><strong>${escH(al.nombre)}</strong></td>
+      <td><strong>${escH(al.nombre)}</strong>${badgesInclusion(al)}</td>
       <td class="center">${al.grado}</td>
       <td class="center" style="color:${ll>0?'var(--red)':'var(--text3)'}"><strong>${ll}</strong></td>
       <td class="center"><span class="nota-badge ${notaCls(cv)}">${formatN(cv)}</span> <span class="badge ${cal.cls}" style="font-size:10px">${cal.label}</span></td>
@@ -1818,13 +1819,16 @@ async function cargarRolGEI(){
   }
 }
 
-function mostrarAppGEI(){
+async function mostrarAppGEI(){
   // Ocultar login
   document.getElementById('loginOverlay').style.display = 'none';
   // Mostrar header, nav y page
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('mainNav').style.display = 'flex';
   document.getElementById('page').style.display = '';
+  // Cargar datos desde Supabase y refrescar tab actual
+  await cargarDatosDesdeSupabase();
+  showTab(tabActual || 'cursadas');
 }
 
 async function cerrarSesionGEI(){
@@ -1855,6 +1859,150 @@ async function verificarSesionAlCargar(){
     console.error('Error verificando sesión:', e);
   }
 }
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// SINCRONIZACIÓN CON SUPABASE — alumnos, materias, usuarios
+// ════════════════════════════════════════════════════════════════════════════
+
+// Helpers de conversión de formato de grado
+// Supabase guarda "1º grado"..."7º grado"
+// La UI del GEI usa "1°"..."7°"
+function gradoAUI(gradoDB){
+  if(!gradoDB) return '';
+  const m = String(gradoDB).match(/(\d+)/);
+  return m ? m[1] + '°' : gradoDB;
+}
+function gradoADB(gradoUI){
+  if(!gradoUI) return '';
+  const m = String(gradoUI).match(/(\d+)/);
+  return m ? m[1] + 'º grado' : gradoUI;
+}
+
+// Badge visual CUD / DAI / PPI para la tabla de alumnos
+function badgesInclusion(al){
+  const items = [];
+  if(al.tiene_cud) items.push('<span title="Certificado Único de Discapacidad" style="display:inline-block;background:#2e5e3f;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:700">CUD</span>');
+  if(al.tiene_dai) items.push('<span title="Docente de Apoyo a la Inclusión" style="display:inline-block;background:#1d3a5f;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:700">DAI</span>');
+  if(al.tiene_ppi) items.push('<span title="Proyecto Pedagógico Individual" style="display:inline-block;background:#c9b06a;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:700">PPI</span>');
+  return items.join('');
+}
+
+// Actualiza el badge de conexión del header
+function setHeaderConexion(texto, color){
+  const el = document.getElementById('headerConexion');
+  if(el){ el.textContent = texto; el.style.color = color || '#999'; }
+}
+
+// Carga alumnos, materias y usuarios desde Supabase y los pone en las
+// variables locales. También refresca el header.
+async function cargarDatosDesdeSupabase(){
+  if(!sb){
+    setHeaderConexion('🔴 Sin conexión', '#a34434');
+    console.warn('⚠ Supabase no inicializado — no se cargan datos');
+    return;
+  }
+
+  setHeaderConexion('⏳ Cargando datos...', '#c9b06a');
+
+  try {
+    // 1. ALUMNOS — leer todos los activos del año en curso
+    const { data: alumnosDB, error: errAl } = await sb.from('alumnos')
+      .select('id, nombre, grado, nivel, activo, tiene_cud, cud_numero, cud_diagnostico, cud_vencimiento, tiene_dai, dai_nombre, dai_institucion, dai_contacto, tiene_ppi, ppi_fecha, adaptaciones_curriculares, observaciones_inclusion')
+      .eq('activo', true)
+      .order('grado')
+      .order('nombre');
+    if(errAl) throw new Error('Alumnos: ' + errAl.message);
+
+    alumnos = (alumnosDB || []).map(a => ({
+      id: a.id,                   // UUID
+      nombre: a.nombre || '',
+      grado: gradoAUI(a.grado),   // "1º grado" → "1°"
+      nivel: a.nivel,
+      tiene_cud: !!a.tiene_cud,
+      cud_numero: a.cud_numero,
+      cud_diagnostico: a.cud_diagnostico,
+      cud_vencimiento: a.cud_vencimiento,
+      tiene_dai: !!a.tiene_dai,
+      dai_nombre: a.dai_nombre,
+      dai_institucion: a.dai_institucion,
+      dai_contacto: a.dai_contacto,
+      tiene_ppi: !!a.tiene_ppi,
+      ppi_fecha: a.ppi_fecha,
+      adaptaciones_curriculares: a.adaptaciones_curriculares,
+      observaciones_inclusion: a.observaciones_inclusion,
+      _db: a   // objeto original de Supabase
+    }));
+
+    // 2. MATERIAS — leer todas las activas del año en curso y armar aps
+    const { data: materiasDB, error: errM } = await sb.from('materias')
+      .select('id, nombre, grado, area_pedagogica, orden')
+      .eq('activa', true)
+      .order('grado')
+      .order('orden');
+    if(errM) throw new Error('Materias: ' + errM.message);
+
+    // Reconstruir el mapa `aps` con las materias por grado.
+    // Estructura: aps[nombreMateria] = [aprendizajes...] (vacío por ahora).
+    // Las materias se duplican por grado: cada grado tiene su propia versión
+    // de "Lengua", "Matemática", etc. Para el GEI usamos el conjunto
+    // deduplicado como listado de áreas.
+    aps = {};
+    const materiasPorGrado = {};  // {gradoUI: [nombres]}
+    (materiasDB || []).forEach(m => {
+      const nombre = m.nombre;
+      const gradoUI = gradoAUI(m.grado);
+      if(!aps[nombre]) aps[nombre] = [];
+      if(!materiasPorGrado[gradoUI]) materiasPorGrado[gradoUI] = [];
+      materiasPorGrado[gradoUI].push(nombre);
+    });
+    apsLocal = JSON.parse(JSON.stringify(aps));
+    window._materiasPorGrado = materiasPorGrado;   // para futuras consultas
+
+    // 3. USUARIOS (docentes/admin/direccion/coordinador) → se vuelcan a `docentes`
+    const { data: usuariosDB, error: errU } = await sb.from('usuarios')
+      .select('id, email, nombre, rol')
+      .in('rol', ['docente','admin','direccion','coordinador','desarrollador']);
+    if(errU) throw new Error('Usuarios: ' + errU.message);
+
+    docentes = (usuariosDB || []).map(u => ({
+      id: u.id,
+      nombre: u.nombre || u.email || '(sin nombre)',
+      email: u.email,
+      rol: u.rol,
+      asignaciones: []  // se llenarán cuando leamos docente_asignaciones (próximo paso)
+    }));
+
+    // Resumen en consola y header
+    const nAl = alumnos.length;
+    const nMat = (materiasDB || []).length;
+    const nDoc = docentes.length;
+    const texto = `🟢 Online · ${nAl} alumnos · ${nMat} materias · ${nDoc} usuarios`;
+    setHeaderConexion(texto, '#2e5e3f');
+    console.log('✓ Datos cargados desde Supabase:');
+    console.log('  Alumnos:', nAl, '(por grado:', Object.fromEntries(
+      Object.entries(alumnos.reduce((acc,a)=>{acc[a.grado]=(acc[a.grado]||0)+1;return acc;},{})).sort()
+    ), ')');
+    console.log('  Materias:', nMat, '(áreas distintas:', Object.keys(aps).length, ')');
+    console.log('  Usuarios:', nDoc);
+
+  } catch(e){
+    console.error('❌ Error cargando datos desde Supabase:', e);
+    setHeaderConexion('🔴 Error: ' + e.message, '#a34434');
+    alert('Error cargando datos desde Supabase:\n\n' + e.message);
+  }
+}
+
+// Botón 🔄 Recargar — recarga datos y re-renderiza
+async function recargarDatos(){
+  const btn = document.getElementById('btnRecargar');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Recargando...'; }
+  await cargarDatosDesdeSupabase();
+  // Re-renderizar la pestaña activa
+  showTab(tabActual || 'cursadas');
+  if(btn){ btn.disabled = false; btn.textContent = '🔄 Recargar'; }
+}
+
 
 // Ejecutar verificación de sesión al cargar la página
 window.addEventListener('load', verificarSesionAlCargar);
