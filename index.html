@@ -1894,6 +1894,10 @@ function setHeaderConexion(texto, color){
   if(el){ el.textContent = texto; el.style.color = color || '#999'; }
 }
 
+// Stub de compatibilidad — antes era un helper del header viejo.
+// No hace nada porque el nuevo badge lo mantiene cargarDatosDesdeSupabase().
+function updateHeaderStats(){ /* noop */ }
+
 // Carga alumnos, materias y usuarios desde Supabase y los pone en las
 // variables locales. También refresca el header.
 async function cargarDatosDesdeSupabase(){
