@@ -250,7 +250,7 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
     <div class="card-head">
       <h2 id="cursadasTitle">📚 Cursadas · Primer Período 2026</h2>
       <div class="row">
-        <button class="btn btn-green" onclick="abrirNuevaEval()">+ Nueva evaluación y cargar notas</button>
+        <button class="btn btn-green" id="btnNuevaEvalCabecera" onclick="abrirNuevaEval()">+ Nueva evaluación y cargar notas</button>
       </div>
     </div>
     <div class="card-body" style="padding:0" id="cursadasList"></div>
@@ -261,7 +261,7 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
     <div class="card-head">
       <h2 id="materiaDetalleTitle">Evaluaciones</h2>
       <div class="row">
-        <button class="btn btn-green btn-sm" onclick="abrirNuevaEval()">+ Nueva evaluación y cargar notas</button>
+        <button class="btn btn-green btn-sm" id="btnNuevaEvalMateria" onclick="abrirNuevaEval()">+ Nueva evaluación y cargar notas</button>
         <button class="btn btn-outline btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
       </div>
     </div>
@@ -814,7 +814,13 @@ function renderCursadas(){
 function abrirMateria(mat){
   materiaActual=mat;
   document.getElementById('materiaDetalle').style.display='';
-  document.getElementById('materiaDetalleTitle').textContent=`${mat} · ${periodoActual} · ${gradoActual}`;
+  // Título con etiqueta LECTURA si corresponde
+  const puedeEditar = puedoEditarMateriaEnGrado(mat, gradoActual);
+  const sufijo = puedeEditar ? '' : ' · 👁 SOLO LECTURA';
+  document.getElementById('materiaDetalleTitle').innerHTML = `${escH(mat)} · ${periodoActual} · ${gradoActual}${sufijo}`;
+  // Mostrar/ocultar el botón "+ Nueva evaluación" según permiso
+  const btnNueva = document.getElementById('btnNuevaEvalMateria');
+  if(btnNueva) btnNueva.style.display = puedeEditar ? '' : 'none';
   renderEvalList();
   document.getElementById('materiaDetalle').scrollIntoView({behavior:'smooth'});
 }
@@ -837,10 +843,14 @@ function cerrarDetalle(){document.getElementById('materiaDetalle').style.display
 
 function renderEvalList(){
   if(!materiaActual)return;
+  const puedeEditar = puedoEditarMateriaEnGrado(materiaActual, gradoActual);
   const evs=evalsDeMateria(materiaActual,gradoActual,periodoActual).sort((a,b)=>a.fecha.localeCompare(b.fecha));
   const fils=alumnos.filter(a=>a.grado===gradoActual);
   if(!evs.length){
-    document.getElementById('evalList').innerHTML=`<div class="empty"><div class="empty-icon">📝</div>No hay evaluaciones cargadas para ${materiaActual} en este período.<br><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="abrirNuevaEval()">+ Crear primera evaluación</button></div>`;
+    const btnCrear = puedeEditar
+      ? `<br><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="abrirNuevaEval()">+ Crear primera evaluación</button>`
+      : `<br><span style="color:var(--text3);font-size:12px;margin-top:10px;display:inline-block">👁 Solo lectura — no sos docente de esta materia</span>`;
+    document.getElementById('evalList').innerHTML=`<div class="empty"><div class="empty-icon">📝</div>No hay evaluaciones cargadas para ${materiaActual} en este período.${btnCrear}</div>`;
     return;
   }
   let html='';
@@ -985,12 +995,24 @@ function abrirCargarNotas(evalId){
     const nota=ev.notas[al.id];const nVal=(nota!==undefined&&nota!==null&&nota!=="")?nota:"";
     const aus=(ev.ausentes||[]).includes(al.id);
     const tieneNota=nVal!==""&&!aus;
+    // PASO 3.4c — bloquear edición si el usuario no da esta materia
+    const notaDisabled = aus || !puedeEditar;
+    const notaStyle = (aus || !puedeEditar) ? 'opacity:.5;cursor:not-allowed' : '';
+    const inputAttrs = puedeEditar
+      ? `onchange="guardarNotaEval(${evalId},${al.id},this.value)" ${aus?'disabled style="opacity:.3"':''}`
+      : `readonly disabled style="${notaStyle}"`;
+    const checkAttrs = puedeEditar
+      ? `${aus?'checked':''} onchange="toggleAusente(${evalId},${al.id},this.checked)"`
+      : `${aus?'checked':''} disabled`;
+    const btnBorrar = (tieneNota && puedeEditar)
+      ? `<button class="btn btn-red btn-xs" onclick="borrarNotaEval(${evalId},${al.id})" title="Borrar nota">✕</button>`
+      : '—';
     html+=`<tr>
       <td class="center" style="color:var(--text3)">${i+1}</td>
       <td><strong>${escH(al.nombre)}</strong></td>
-      <td class="center"><input type="number" min="0" max="10" step="0.25" class="nota-inp" value="${nVal}" id="nota_${evalId}_${al.id}" onchange="guardarNotaEval(${evalId},${al.id},this.value)" ${aus?'disabled style="opacity:.3"':''}></td>
-      <td class="center"><input type="checkbox" ${aus?'checked':''} onchange="toggleAusente(${evalId},${al.id},this.checked)"></td>
-      <td class="center">${tieneNota?`<button class="btn btn-red btn-xs" onclick="borrarNotaEval(${evalId},${al.id})" title="Borrar nota">✕</button>`:'—'}</td>
+      <td class="center"><input type="number" min="0" max="10" step="0.25" class="nota-inp" value="${nVal}" id="nota_${evalId}_${al.id}" ${inputAttrs}></td>
+      <td class="center"><input type="checkbox" ${checkAttrs}></td>
+      <td class="center">${btnBorrar}</td>
     </tr>`;
   });
   html+=`</tbody></table>
@@ -2215,6 +2237,12 @@ function aplicarPermisosUI(){
     } else {
       btnTab.innerHTML = '📝 Registro de Notas';
     }
+  }
+
+  // 8. Botón "+ Nueva evaluación" de la cabecera: oculto para psicopedagoga (nunca edita)
+  const btnNuevaEvalCab = document.getElementById('btnNuevaEvalCabecera');
+  if(btnNuevaEvalCab){
+    btnNuevaEvalCab.style.display = esModoLectura() ? 'none' : '';
   }
 }
 
