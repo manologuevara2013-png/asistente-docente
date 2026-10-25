@@ -219,7 +219,7 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
 </div>
 
 <div class="nav" id="mainNav" style="display:none">
-  <button class="active" onclick="showTab('cursadas')">📚 Mis Cursadas</button>
+  <button class="active" id="btnTabCursadas" onclick="showTab('cursadas')">📝 Registro de Notas</button>
   <button onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
   <button onclick="showTab('docentes')">👩‍🏫 Docentes</button>
   <button onclick="showTab('informes')">📊 Informes</button>
@@ -514,6 +514,7 @@ let sb = null;
 let modoOnline = false;
 let usuarioLog = null;
 let usuarioActual = null;
+let misAsignaciones = [];  // filas de docente_asignaciones del usuario logueado (PASO 3.4c)
 
 try {
   if (window.supabase && window.supabase.createClient) {
@@ -581,7 +582,9 @@ try {
 // ════════════════════════════════════════════════════════════════════════════
 let convEventos = [];  // vacío por ahora - en PASO 3.3 leerá de tabla registros/reconocimientos de Convivencia AEC
 function notaConvivencia(alId, grado, periodo){ return null; }
-function convCalificacion(nota){ return "—"; }
+// Devuelve un objeto {cls, label} para evitar "undefined" en el render.
+// Se completará cuando se integre con Convivencia AEC.
+function convCalificacion(nota){ return {cls: '', label: '—'}; }
 function convEventosAlumno(alId, grado, periodo){ return []; }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -737,13 +740,47 @@ function renderPerTabs(){
 }
 function renderCursadas(){
   const elCT=document.getElementById('cursadasTitle');
-  if(elCT) elCT.textContent=`📚 Cursadas · ${periodoActual} 2026`;
+  if(elCT){
+    // Título dinámico según rol
+    const prefijo = esAdminDirCoord() ? '📊 Planilla de Seguimiento' : '📝 Registro de Notas';
+    elCT.textContent = `${prefijo} · ${periodoActual} 2026`;
+  }
   const elCL=document.getElementById('cursadasList');
   if(!elCL)return;
-  const mats=Object.keys(aps);
+
+  // Cartel verde "Sos titular de X°" cuando el grado actual es tuyo como titular
+  // Se inyecta antes de la tabla (dentro de #cursadasList lo armamos al final)
+  const esTitularAca = soyTitularDe(gradoActual);
+  const cartelTitular = esTitularAca
+    ? `<div style="background:#e8f5e9;border-left:4px solid #2e5e3f;color:#1b4d2b;padding:8px 14px;margin:0 0 12px 0;border-radius:6px;font-size:13px;font-weight:600">📌 Sos <b>docente titular</b> de ${gradoActual} grado</div>`
+    : '';
+
+  // PASO 3.4c — Filtrar materias visibles según rol/asignación
+  // Admin/dir/coord → todas. Titular → todas las del grado (lectura si no da esa materia).
+  // Docente de materia → solo las materias que da en ese grado.
+  // Psicopedagoga → todas las del grado (lectura total).
+  let mats = Object.keys(aps);
+  const materiasPorGrado = window._materiasPorGrado || {};
+  const matsDelGrado = materiasPorGrado[gradoActual] || mats;
+  if(esDocenteSolo() && !esAdminDirCoord()){
+    if(soyPsicopedagoga() && misGradosPsicopedagoga().includes(gradoActual)){
+      mats = matsDelGrado;                              // ve todas en lectura
+    } else if(soyTitularDe(gradoActual)){
+      mats = matsDelGrado;                              // titular ve todas (lectura las que no da)
+    } else if(doyMateriaEn(gradoActual)){
+      mats = misMateriasEnGrado(gradoActual);           // solo sus materias
+    } else {
+      mats = [];                                        // no debería llegar acá por el filtro de grado
+    }
+  }
+
   const fils=alumnos.filter(a=>a.grado===gradoActual);
   if(!fils.length){
     elCL.innerHTML=`<div class="empty"><div class="empty-icon">📚</div>No hay alumnos en ${gradoActual} grado. Importá o agregá alumnos en la pestaña "Alumnos".</div>`;
+    return;
+  }
+  if(!mats.length){
+    elCL.innerHTML=`<div class="empty"><div class="empty-icon">🔒</div>No tenés materias asignadas en ${gradoActual} grado.</div>`;
     return;
   }
   let html='<table><thead><tr><th style="min-width:200px">Materia</th><th class="center">Evaluaciones</th><th class="center">Notas cargadas</th><th class="center">Promedio</th><th class="center">Aprobados</th><th class="center">Desaprobados</th><th></th></tr></thead><tbody>';
@@ -755,8 +792,11 @@ function renderCursadas(){
     const promGen=proms.length?round2(proms.reduce((a,b)=>a+b,0)/proms.length):null;
     const aprobados=proms.filter(v=>v>=4).length;
     const desaprobados=proms.filter(v=>v<4).length;
+    // ¿Esta materia es editable para el usuario actual, o modo lectura?
+    const puedeEditar = puedoEditarMateriaEnGrado(mat, gradoActual);
+    const badgeLectura = puedeEditar ? '' : ' <span title="Solo lectura — no sos docente de esta materia" style="display:inline-block;background:#e0e0e0;color:#555;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:700">LECTURA</span>';
     html+=`<tr>
-      <td><strong>${escH(mat)}</strong></td>
+      <td><strong>${escH(mat)}</strong>${badgeLectura}</td>
       <td class="center">${nEvals}</td>
       <td class="center">${totalNotas}</td>
       <td class="center"><span class="nota-badge ${notaCls(promGen)}">${formatN(promGen)}</span></td>
@@ -767,8 +807,8 @@ function renderCursadas(){
   });
 
   html+='</tbody></table>';
-  elCL.innerHTML=html;
-  
+  elCL.innerHTML = cartelTitular + html;
+
 }
 
 function abrirMateria(mat){
@@ -1019,6 +1059,33 @@ function selGradoAlumnos(g,btn){
   renderAlumnos();
 }
 function renderAlumnos(){
+  // PASO 3.4c — Filtrar botones de grado por los que el docente puede ver,
+  // y sincronizar el "active" con gradoAlumnos actual (fix: 1° quedaba verde).
+  const botonesGrado = document.querySelectorAll('#tab-alumnos .per-tab');
+  const visibles = esDocenteSolo() ? misGradosVisibles() : null; // null = ver todos
+  botonesGrado.forEach(b=>{
+    const match = b.textContent.match(/(\d+°)/);
+    if(!match) return;
+    const gradoBtn = match[1];
+    // Mostrar/ocultar según rol
+    if(visibles && !visibles.includes(gradoBtn)){
+      b.style.display = 'none';
+    } else {
+      b.style.display = '';
+    }
+    // Sincronizar "active" con gradoAlumnos (fix: botón 1° quedaba verde)
+    b.classList.toggle('active', gradoBtn === gradoAlumnos);
+  });
+  // Si gradoAlumnos no es visible para el docente, saltar al primero visible
+  if(visibles && visibles.length && !visibles.includes(gradoAlumnos)){
+    gradoAlumnos = visibles[0];
+    botonesGrado.forEach(b=>{
+      const match = b.textContent.match(/(\d+°)/);
+      if(match && match[1] === gradoAlumnos) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+  }
+
   const g=gradoAlumnos;
   const elTC=document.getElementById('alTituloCarga');
   const elTL=document.getElementById('alTituloListado');
@@ -1115,15 +1182,55 @@ function renderDocentes(){
       <p>No hay docentes registrados.</p><p style="font-size:12px;color:var(--text2)">Cargá docentes desde Excel o agregarlos manualmente arriba.</p></div>`;
     return;
   }
-  let html='<table><thead><tr><th>Docente</th><th>Materia(s)</th><th>Grado(s)</th><th style="width:120px"></th></tr></thead><tbody>';
+  let html='<table><thead><tr><th>Docente</th><th>Rol</th><th>Materia(s)</th><th>Grado(s)</th><th style="width:120px"></th></tr></thead><tbody>';
   docentes.forEach(d=>{
     const asigs=d.asignaciones||[];
-    const matsStr=asigs.length?[...new Set(asigs.map(a=>a.materia).filter(Boolean))].join(', '):'<span style="color:var(--text3)">Sin asignar</span>';
-    const gdsStr=asigs.length?[...new Set(asigs.map(a=>a.grado).filter(Boolean))].join(', '):'<span style="color:var(--text3)">—</span>';
+
+    // Separar por tipo_asignacion para formatear mejor
+    const titulares   = asigs.filter(a=>a.tipo_asignacion==='titular').map(a=>a.grado).filter(Boolean);
+    const matGrados   = asigs.filter(a=>a.tipo_asignacion==='materia');
+    const psico       = asigs.filter(a=>a.tipo_asignacion==='psicopedagoga').map(a=>a.grado).filter(Boolean);
+    const accesoTotal = asigs.some(a=>a.tipo_asignacion==='acceso_total');
+
+    // Columna Materia(s): lista única de materias que da
+    let matsStr;
+    if(accesoTotal){
+      matsStr='<span style="color:var(--text3)">— (acceso total)</span>';
+    } else if(psico.length){
+      matsStr='<span style="color:#664d03;font-weight:600">Psicopedagoga (solo lectura)</span>';
+    } else {
+      const mats=[...new Set(matGrados.map(a=>a.materia).filter(Boolean))];
+      matsStr=mats.length?mats.map(m=>escH(m)).join(', '):'<span style="color:var(--text3)">Sin asignar</span>';
+    }
+
+    // Columna Grado(s): "7° (titular), 6°, 7°" (titular marcado)
+    let gdsStr;
+    if(accesoTotal){
+      gdsStr='<span style="color:var(--text3)">—</span>';
+    } else {
+      const partes=[];
+      titulares.forEach(g=>partes.push(`<b>${g}</b> <span style="font-size:10px;color:var(--blue)">titular</span>`));
+      // Grados donde da materia pero NO es titular (para no duplicar)
+      const gradosMat=[...new Set(matGrados.map(a=>a.grado).filter(Boolean))];
+      gradosMat.forEach(g=>{ if(!titulares.includes(g)) partes.push(g); });
+      psico.forEach(g=>partes.push(`${g} <span style="font-size:10px;color:#664d03">psico</span>`));
+      gdsStr=partes.length?partes.join(', '):'<span style="color:var(--text3)">—</span>';
+    }
+
+    // Columna Rol (nuevo)
+    const rolBadge = {
+      'admin':         '<span style="background:#D96F6F;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700">ADMIN</span>',
+      'direccion':     '<span style="background:#D96F6F;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700">DIRECCIÓN</span>',
+      'coordinador':   '<span style="background:#4A9A6F;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700">COORD</span>',
+      'desarrollador': '<span style="background:#8B6DB3;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700">DEV</span>',
+      'docente':       '<span style="background:#6B8FC2;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700">DOCENTE</span>'
+    }[d.rol] || '';
+
     html+=`<tr>
-      <td><strong>${escH(d.nombre)}</strong></td>
+      <td><strong>${escH(d.nombre)}</strong><br><span style="font-size:11px;color:var(--text3)">${escH(d.email||'')}</span></td>
+      <td class="center">${rolBadge}</td>
       <td style="font-size:12px">${matsStr}</td>
-      <td class="center">${gdsStr}</td>
+      <td class="center" style="font-size:12px">${gdsStr}</td>
       <td class="center">${esDocenteSolo() ? '<span style="color:var(--text3);font-size:11px">—</span>' : `
         <button class="btn btn-pri btn-xs" onclick="editarDocente('${d.id}')" title="Editar / Asignar">✏️ Asignar</button>
         <button class="btn btn-red btn-xs" onclick="eliminarDocente('${d.id}')">✕</button>`}
@@ -1799,6 +1906,9 @@ async function cargarRolGEI(){
     usuarioActual = data;
     console.log('✓ Usuario cargado:', usuarioActual.nombre, '— Rol:', usuarioActual.rol);
 
+    // PASO 3.4c — Cargar también las asignaciones del docente logueado
+    await cargarMisAsignaciones();
+
     // Mostrar el nombre y rol en el header
     const rolEmoji = {
       'desarrollador': '🔧',
@@ -1922,12 +2032,84 @@ function setHeaderConexion(texto, color){
 function updateHeaderStats(){ /* noop */ }
 
 // ════════════════════════════════════════════════════════════════════════════
-// PERMISOS POR ROL
+// PERMISOS POR ROL — PASO 3.4c
 // ════════════════════════════════════════════════════════════════════════════
+
+// Lee de Supabase todas las filas de docente_asignaciones que matcheen el email
+// del usuario logueado. Se llama después de cargarRolGEI().
+async function cargarMisAsignaciones(){
+  misAsignaciones = [];
+  if(!sb || !usuarioActual || !usuarioActual.email) return;
+  try {
+    const { data, error } = await sb.from('docente_asignaciones')
+      .select('tipo_asignacion, grado, materia, observaciones')
+      .eq('email', usuarioActual.email);
+    if(error){
+      console.warn('⚠ No se pudieron leer asignaciones (docente_asignaciones):', error.message);
+      return;
+    }
+    misAsignaciones = data || [];
+    console.log('✓ Asignaciones cargadas:', misAsignaciones.length, 'fila(s)');
+    if(misAsignaciones.length){
+      console.table(misAsignaciones.map(a => ({
+        tipo: a.tipo_asignacion, grado: a.grado || '—', materia: a.materia || '—'
+      })));
+    }
+  } catch(e){
+    console.warn('⚠ Error cargando docente_asignaciones:', e);
+  }
+}
+
 // Helpers que leen usuarioActual.rol y responden si el usuario puede hacer algo
 function esDocenteSolo(){ return usuarioActual && usuarioActual.rol === 'docente'; }
 function esAdminDirCoord(){ return usuarioActual && ['admin','direccion','coordinador','desarrollador'].includes(usuarioActual.rol); }
 function esSoloDireccion(){ return usuarioActual && ['direccion','desarrollador'].includes(usuarioActual.rol); }
+
+// Helpers de consulta sobre misAsignaciones (todas devuelven [] o false si no aplica)
+function soyPsicopedagoga(){
+  return misAsignaciones.some(a => a.tipo_asignacion === 'psicopedagoga');
+}
+function misGradosTitulares(){
+  return [...new Set(misAsignaciones.filter(a => a.tipo_asignacion === 'titular').map(a => a.grado).filter(Boolean))];
+}
+function misGradosConMateria(){
+  return [...new Set(misAsignaciones.filter(a => a.tipo_asignacion === 'materia').map(a => a.grado).filter(Boolean))];
+}
+function misGradosPsicopedagoga(){
+  return [...new Set(misAsignaciones.filter(a => a.tipo_asignacion === 'psicopedagoga').map(a => a.grado).filter(Boolean))];
+}
+// Todos los grados que el docente puede ver (titular + materia + psicopedagoga)
+function misGradosVisibles(){
+  const t = misGradosTitulares();
+  const m = misGradosConMateria();
+  const p = misGradosPsicopedagoga();
+  return [...new Set([...t, ...m, ...p])].sort();
+}
+function soyTitularDe(grado){ return misGradosTitulares().includes(grado); }
+function doyMateriaEn(grado){ return misGradosConMateria().includes(grado); }
+function misMateriasEnGrado(grado){
+  return [...new Set(misAsignaciones
+    .filter(a => a.tipo_asignacion === 'materia' && a.grado === grado && a.materia)
+    .map(a => a.materia))];
+}
+// ¿El usuario puede VER este grado?
+function puedoVerGrado(grado){
+  if(esAdminDirCoord()) return true;                     // admin/dir/coord ven todo
+  if(soyPsicopedagoga() && misGradosPsicopedagoga().includes(grado)) return true;  // 5°,6°,7°
+  return soyTitularDe(grado) || doyMateriaEn(grado);
+}
+// ¿El usuario puede EDITAR (cargar/modificar) notas en esta materia-grado?
+function puedoEditarMateriaEnGrado(materia, grado){
+  if(esAdminDirCoord()) return true;
+  if(soyPsicopedagoga()) return false;                   // psicopedagoga nunca edita
+  // Titular puede editar en su materia de su grado titular, docente de materia en sus materias
+  const misMats = misMateriasEnGrado(grado);
+  return misMats.includes(materia);
+}
+// ¿Es modo lectura general? (psicopedagoga)
+function esModoLectura(){
+  return soyPsicopedagoga() && !esAdminDirCoord();
+}
 
 // Aplica los permisos al DOM: oculta tabs y marca el body con la clase
 // correspondiente al rol para que el CSS esconda las cards admin-only.
@@ -1937,6 +2119,8 @@ function aplicarPermisosUI(){
   // 1. Clase en el body — el CSS esconde elementos .admin-only cuando body.rol-docente
   document.body.classList.remove('rol-docente','rol-admin','rol-direccion','rol-coordinador','rol-desarrollador');
   document.body.classList.add('rol-' + usuarioActual.rol);
+  // Clase extra para psicopedagoga (modo lectura total)
+  document.body.classList.toggle('modo-lectura', esModoLectura());
 
   // 2. Ocultar tabs del navbar que el docente no puede ver
   if(esDocenteSolo()){
@@ -1951,6 +2135,86 @@ function aplicarPermisosUI(){
     // Admin/dirección/coord/desarrollador — todos los tabs visibles
     document.querySelectorAll('#mainNav button').forEach(b => b.style.display = '');
     console.log('🔓 Permisos aplicados: rol ' + usuarioActual.rol + ' (acceso completo)');
+  }
+
+  // 3. PASO 3.4c — Filtrar el selector de grados a los que el docente puede ver
+  const selGrado = document.getElementById('gGrado');
+  if(selGrado && esDocenteSolo()){
+    const visibles = misGradosVisibles();
+    if(visibles.length === 0){
+      console.warn('⚠ El docente no tiene asignaciones cargadas en docente_asignaciones');
+    } else {
+      // Reconstruir el select con solo los grados visibles
+      selGrado.innerHTML = visibles.map(g =>
+        `<option value="${g}"${g === gradoActual ? ' selected' : ''}>${g}</option>`
+      ).join('');
+      // Si gradoActual no está entre los visibles, saltar al primero visible
+      if(!visibles.includes(gradoActual)){
+        gradoActual = visibles[0];
+        selGrado.value = gradoActual;
+        sv("gradoActual", gradoActual);
+      }
+    }
+  }
+
+  // 4. Banner "Modo lectura" para psicopedagoga
+  let banner = document.getElementById('bannerModoLectura');
+  if(esModoLectura()){
+    if(!banner){
+      banner = document.createElement('div');
+      banner.id = 'bannerModoLectura';
+      banner.style.cssText = 'background:#fff3cd;border-bottom:2px solid #c9a040;color:#664d03;padding:8px 16px;text-align:center;font-size:13px;font-weight:600';
+      banner.innerHTML = '👁 <b>Modo lectura — Psicopedagoga.</b> Podés ver notas e informes de ' + misGradosPsicopedagoga().join(', ') + ' pero no cargar ni modificar.';
+      const nav = document.getElementById('mainNav');
+      if(nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
+    }
+  } else if(banner){
+    banner.remove();
+  }
+
+  // 5. Loggear info útil en consola
+  if(esDocenteSolo()){
+    console.log('📘 Tus grados visibles:', misGradosVisibles());
+    console.log('📘 Sos titular de:', misGradosTitulares());
+    console.log('📘 Das materia en:', misGradosConMateria());
+    if(soyPsicopedagoga()) console.log('📘 Psicopedagoga en:', misGradosPsicopedagoga());
+  }
+
+  // 6. Chip "Titular de X°" en el header (al lado del badge de rol)
+  const headerEl = document.getElementById('headerUsuario');
+  if(headerEl){
+    // Primero removemos un chip previo si lo hubiera (para no duplicar al re-aplicar)
+    const chipPrevio = headerEl.querySelector('.chip-titular-header');
+    if(chipPrevio) chipPrevio.remove();
+    const titulares = misGradosTitulares();
+    if(titulares.length){
+      const chip = document.createElement('span');
+      chip.className = 'chip-titular-header';
+      chip.style.cssText = 'background:#2e5e3f;color:#fff;font-size:10px;margin-left:6px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:0.5px';
+      chip.textContent = '📌 Titular de ' + titulares.join(', ');
+      headerEl.appendChild(chip);
+    }
+    // Chip psicopedagoga
+    const chipPsicoPrevio = headerEl.querySelector('.chip-psico-header');
+    if(chipPsicoPrevio) chipPsicoPrevio.remove();
+    if(soyPsicopedagoga()){
+      const psicoGrados = misGradosPsicopedagoga();
+      const chipP = document.createElement('span');
+      chipP.className = 'chip-psico-header';
+      chipP.style.cssText = 'background:#664d03;color:#fff;font-size:10px;margin-left:6px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:0.5px';
+      chipP.textContent = '👁 Psicopedagoga ' + psicoGrados.join(', ');
+      headerEl.appendChild(chipP);
+    }
+  }
+
+  // 7. Rebautizar la tab según el rol — "Registro de Notas" (docente) / "Planilla de Seguimiento" (admin/dir/coord)
+  const btnTab = document.getElementById('btnTabCursadas');
+  if(btnTab){
+    if(esAdminDirCoord()){
+      btnTab.innerHTML = '📊 Planilla de Seguimiento';
+    } else {
+      btnTab.innerHTML = '📝 Registro de Notas';
+    }
   }
 }
 
@@ -2031,8 +2295,25 @@ async function cargarDatosDesdeSupabase(){
       nombre: u.nombre || u.email || '(sin nombre)',
       email: u.email,
       rol: u.rol,
-      asignaciones: []  // se llenarán cuando leamos docente_asignaciones (próximo paso)
+      asignaciones: []
     }));
+
+    // 4. ASIGNACIONES — leer toda la tabla docente_asignaciones y anidarlas por email
+    //    (PASO 3.4c: para que la tab Docentes muestre quién da qué)
+    const { data: asignacionesDB, error: errAs } = await sb.from('docente_asignaciones')
+      .select('email, tipo_asignacion, grado, materia, observaciones');
+    if(errAs){
+      console.warn('⚠ No se pudieron leer todas las asignaciones:', errAs.message);
+    } else {
+      const porEmail = {};
+      (asignacionesDB || []).forEach(a => {
+        if(!porEmail[a.email]) porEmail[a.email] = [];
+        porEmail[a.email].push(a);
+      });
+      docentes.forEach(d => {
+        d.asignaciones = porEmail[d.email] || [];
+      });
+    }
 
     // Resumen en consola y header
     const nAl = alumnos.length;
