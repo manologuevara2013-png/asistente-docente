@@ -265,6 +265,24 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
         <button class="btn btn-outline btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
       </div>
     </div>
+    <!-- Panel desglose por AB (colapsable) -->
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fafafa">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleDesgloseAB()">
+        <strong style="font-size:13px">📊 Desglose por Aprendizaje Base</strong>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="desgloseAbChevron" style="font-size:14px;color:var(--text3)">▼</span>
+        </div>
+      </div>
+      <div id="desgloseAbPanel" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <label style="font-size:12px;font-weight:600">Vista:</label>
+          <button class="btn btn-outline btn-xs" id="btnVistaCurso" onclick="setVistaDesglose('curso')">👥 Curso completo</button>
+          <button class="btn btn-outline btn-xs" id="btnVistaAlumno" onclick="setVistaDesglose('alumno')">👤 Por alumno</button>
+          <select class="sel" id="selAlumnoDesglose" style="font-size:12px;padding:3px 6px;display:none;margin-left:4px"></select>
+        </div>
+        <div id="desgloseAbContenido" style="font-size:12px"></div>
+      </div>
+    </div>
     <div class="card-body" style="padding:0" id="evalList"></div>
   </div>
 </div>
@@ -394,24 +412,29 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
   </div>
 </div>
 
-<!-- ═══ TAB: INFORMES ═══ -->
+<!-- ═══ TAB: INFORMES (panel multi-vista) ═══ -->
 <div id="tab-informes" class="hidden">
   <div class="card">
     <div class="card-head">
-      <h2>📊 Informes de rendimiento</h2>
+      <h2 id="tituloInformes">📊 Panel de informes</h2>
       <div class="row">
-        <select class="sel" id="infGrado" onchange="renderInformeAlumnoList()">
-          <option>1°</option><option>2°</option><option>3°</option><option>4°</option><option>5°</option><option>6°</option><option selected>7°</option>
-        </select>
-        <select class="sel" id="infAlumno" onchange="renderInforme()">
-          <option value="">— Seleccioná un alumno —</option>
-        </select>
-        <button class="btn btn-pri btn-sm" onclick="imprimirInforme()">🖨️ Imprimir</button>
-        <button class="btn btn-green btn-sm" onclick="exportarInformeExcel()">📥 Excel</button>
+        <button class="btn btn-pri btn-sm" onclick="imprimirInformeActual()">🖨️ Imprimir</button>
+        <button class="btn btn-green btn-sm" onclick="exportarInformeActual()">📥 Excel</button>
       </div>
     </div>
+    <!-- Selector de vista -->
+    <div style="padding:10px 16px;background:#f5f8fa;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap">
+      <button class="per-tab" id="vistaBtn-institucional" onclick="setVistaInforme('institucional')">🏫 Institucional</button>
+      <button class="per-tab" id="vistaBtn-grado" onclick="setVistaInforme('grado')">📚 Por grado</button>
+      <button class="per-tab" id="vistaBtn-materia" onclick="setVistaInforme('materia')">📖 Por materia</button>
+      <button class="per-tab" id="vistaBtn-alumno" onclick="setVistaInforme('alumno')">👤 Por alumno</button>
+      <button class="per-tab" id="vistaBtn-ab" onclick="setVistaInforme('ab')">🎯 Por AB</button>
+    </div>
+    <!-- Filtros contextuales de la vista actual -->
+    <div id="informesFiltros" style="padding:10px 16px;background:#fafafa;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px"></div>
+    <!-- Contenido -->
     <div class="card-body" id="informeContent">
-      <div class="empty"><div class="empty-icon">📊</div>Seleccioná un grado y un alumno para ver su informe personalizado.</div>
+      <div class="empty"><div class="empty-icon">📊</div>Cargando panel...</div>
     </div>
   </div>
 </div>
@@ -436,12 +459,31 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
     <div class="card-head">
       <h2>📋 Registro de auditoría — Cambios y modificaciones</h2>
       <div class="row">
-        <button class="btn btn-green btn-sm" onclick="exportarAuditoria()">📥 Exportar a Excel</button>
+        <button class="btn btn-green btn-sm" onclick="exportarAuditoria()">📥 Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportarAuditoriaPDF()">📄 PDF</button>
         <button class="btn btn-outline btn-sm" onclick="imprimirAuditoria()">🖨️ Imprimir</button>
       </div>
     </div>
+    <div style="padding:12px 16px;background:#f9fafb;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px">
+      <label style="font-weight:600">Año:</label>
+      <select class="sel" id="auditoriaAnio" style="font-size:12px;padding:3px 6px" onchange="renderAuditoria()">
+        <!-- se llena dinámicamente -->
+      </select>
+      <label style="font-weight:600;margin-left:8px">App:</label>
+      <select class="sel" id="auditoriaApp" style="font-size:12px;padding:3px 6px" onchange="renderAuditoria()">
+        <option value="todo">Todas</option>
+        <option value="gei">GEI</option>
+        <option value="convivencia">Convivencia</option>
+      </select>
+      <label style="font-weight:600;margin-left:8px">Buscar:</label>
+      <input class="inp" id="auditoriaBuscar" placeholder="Acción, motivo, tabla..." style="font-size:12px;padding:3px 6px;flex:1;min-width:150px" oninput="renderAuditoria()">
+      <span id="auditoriaInfo" style="margin-left:auto;color:var(--text3);font-size:11px"></span>
+    </div>
     <div class="card-body" style="padding:0" id="auditoriaLista">
-      <div class="empty" style="padding:16px">No hay cambios registrados.</div>
+      <div class="empty" style="padding:16px">Cargando registros...</div>
+    </div>
+    <div style="padding:12px;text-align:center;border-top:1px solid var(--border)">
+      <button class="btn btn-outline btn-sm" id="btnCargarMasAudit" onclick="cargarMasAuditoria()" style="display:none">⬇ Cargar 100 más</button>
     </div>
   </div>
 </div>
@@ -477,26 +519,21 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
     </div>
   </div>
 
-  <!-- MATERIAS Y APS -->
+  <!-- APRENDIZAJES BASE (Res 796/25 + propios) -->
   <div class="card">
-    <div class="card-head"><h2>⚙️ Materias y Aprendizajes Prioritarios</h2>
-      <button class="btn btn-pri btn-sm" id="btnGuardarAPs" onclick="guardarAPs()">💾 Guardar cambios</button>
-    </div>
-    <div class="card-body">
-      <div class="row" style="margin-bottom:12px">
-        <input class="inp" id="nuevaArea" placeholder="Nueva materia..." style="flex:1" onkeydown="if(event.key==='Enter')agregarArea()">
-        <button class="btn btn-green btn-sm" onclick="agregarArea()">+ Agregar</button>
-      </div>
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:12px" id="apsGrid">
-        <div id="areaListWrap" style="border:1px solid var(--border);border-radius:8px;padding:8px"></div>
-        <div id="apPanel" style="border:1px solid var(--border);border-radius:8px;padding:14px"></div>
+    <div class="card-head"><h2>📚 Aprendizajes Base por materia</h2>
+      <div style="font-size:11px;color:var(--text3)">
+        Res 796/25 (Lengua y Matemática) · DCP Res 3556/19 (demás materias)
       </div>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-head"><h2>🗑️ Datos</h2></div>
     <div class="card-body">
-      <button class="btn btn-red btn-sm" onclick="accionProtegida(()=>{if(confirm('¿Borrar TODOS los datos? No se puede deshacer.')){localStorage.clear();location.reload();}},'Borrar TODOS los datos del sistema')">Borrar todos los datos y empezar de cero</button>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:8px;background:#f5f8fa;border-radius:6px">
+        💡 Los AB con <strong>origen DGE</strong> son oficiales (no se pueden editar ni eliminar). Los docentes pueden <strong>proponer</strong> AB propios que requieren aprobación de coordinación o dirección antes de activarse.
+      </div>
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:12px" id="apsGrid">
+        <div id="areaListWrap" style="border:1px solid var(--border);border-radius:8px;padding:8px;max-height:600px;overflow-y:auto"></div>
+        <div id="apPanel" style="border:1px solid var(--border);border-radius:8px;padding:14px;max-height:600px;overflow-y:auto"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -594,7 +631,7 @@ const PERIODOS=["Primer Período","Segundo Período","Calificación Final","Inte
 const GRADOS=["1°","2°","3°","4°","5°","6°","7°"];
 const TIPOS_EVAL=[
   {id:"proceso",label:"Evaluación de proceso",css:"tipo-proceso",subtypes:["Escrito","Oral","TP","Carpeta","Concepto","Lección oral","Exposición"]},
-  {id:"ap",label:"Evaluación de AP prioritario",css:"tipo-ap",subtypes:["Evaluación AP"]},
+  {id:"ap",label:"Evaluación de Aprendizaje Base",css:"tipo-ap",subtypes:["Evaluación AB"]},
   {id:"cierre",label:"Cierre de período",css:"tipo-cierre",subtypes:["Cierre de período","Integrador"]}
 ];
 const MATERIAS_DEFAULT=["Catequesis","Ciencias Naturales","Ciencias Sociales",
@@ -627,6 +664,25 @@ let materiaActual = null;
 let tabActual  = "cursadas";
 let chatLoading = false;
 let gradoAlumnos = "7°";
+
+// PASO 3.4e — Aprendizajes Base + Ejes sugeridos (Res 796/25 + DCP Res 3556/19)
+// Estructuras indexadas por materia_id para resolver AB por (nombre+grado).
+let aprendizajesPorMateria = {};   // { materia_id: [{id,codigo,eje,sub_eje,nombre,origen,estado,orden,creado_por}, ...] }
+let ejesSugeridosPorMateria = {};  // { materia_id: [{id,eje,sub_eje,orden}, ...] }
+let materiaIdPorNombreGrado = {};  // { "Lengua::7°": "uuid-materia", ... }  helper de resolución
+
+// Helpers de acceso
+function materiaIdDe(nombreMateria, gradoUI){
+  return materiaIdPorNombreGrado[`${nombreMateria}::${gradoUI}`] || null;
+}
+function aprendizajesDe(nombreMateria, gradoUI){
+  const mid = materiaIdDe(nombreMateria, gradoUI);
+  return mid ? (aprendizajesPorMateria[mid] || []) : [];
+}
+function ejesSugeridosDe(nombreMateria, gradoUI){
+  const mid = materiaIdDe(nombreMateria, gradoUI);
+  return mid ? (ejesSugeridosPorMateria[mid] || []) : [];
+}
 
 function guardarTodo(){
   sv("alumnos",alumnos);sv("evaluaciones",evaluaciones);sv("llamados",llamados);
@@ -680,11 +736,176 @@ function escH(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").rep
 function evalsDeMateria(materia,grado,periodo){
   return evaluaciones.filter(e=>e.materia===materia&&e.grado===grado&&e.periodo===periodo);
 }
-function promedioAlumnoMatPer(alId,materia,grado,periodo){
+
+// PASO 3.4e — CÁLCULO POR APRENDIZAJE BASE (Res 4778/26)
+// Agrupa las notas de las evaluaciones por aprendizaje_id, promedia cada AB,
+// y después promedia los promedios de los AB evaluados.
+// Esto respeta el ejemplo de Montse: Escritura (7,7,7)=7 + Lectura (7,7)=7 + Oralidad (10)=10
+// → nota del período = promedio(7,7,10) = 8  (no promedio simple de las 6 notas)
+// Renderiza AB como chips de colores para mostrar en la UI
+function renderAbChips(abIds){
+  if(!abIds || !abIds.length) return '';
+  return abIds.map(abId => {
+    let nombre = '(AB no encontrado)', codigo = '', color = '#999';
+    for(const arr of Object.values(aprendizajesPorMateria)){
+      const found = arr.find(a => a.id === abId);
+      if(found){
+        nombre = found.nombre;
+        codigo = found.codigo || '';
+        color = found.origen === 'dge' ? '#1a4b7a' : found.origen === 'institucional' ? '#6a3b8a' : '#555';
+        break;
+      }
+    }
+    const label = codigo ? `${codigo}` : nombre;
+    const title = codigo ? `${codigo} · ${nombre}` : nombre;
+    return `<span title="${escH(title)}" style="display:inline-block;background:${color};color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin:2px 3px 2px 0;font-weight:600">${escH(label)}</span>`;
+  }).join('');
+}
+
+// Abre modal para editar los AB de una evaluación existente (reutiliza lógica multi-AB)
+function abrirEditarABEval(evalId){
+  const ev = evaluaciones.find(e => e.id === evalId);
+  if(!ev){ alert('Evaluación no encontrada'); return; }
+  const puedeEditar = puedoEditarMateriaEnGrado(ev.materia, ev.grado);
+  if(!puedeEditar){ alert('No tenés permiso para editar los AB de esta evaluación'); return; }
+
+  const abList = aprendizajesDe(ev.materia, ev.grado);
+  const yaSel = new Set(ev.aprendizaje_ids || []);
+
+  let checksHtml = '';
+  if(!abList.length){
+    checksHtml = `<div style="color:var(--text3);font-style:italic;padding:8px">Sin AB cargados para ${escH(ev.materia)} ${escH(ev.grado)}. Podés cargarlos desde el tab Config.</div>`;
+  } else {
+    // Agrupar por eje
+    const porEje = {};
+    abList.forEach(ab => {
+      const k = ab.eje + (ab.sub_eje ? ' · ' + ab.sub_eje : '');
+      if(!porEje[k]) porEje[k] = [];
+      porEje[k].push(ab);
+    });
+    Object.keys(porEje).forEach(eje => {
+      checksHtml += `<div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:8px;padding:3px 6px;background:#eef2f6;border-left:3px solid #4a7ba3">${escH(eje)}</div>`;
+      porEje[eje].forEach(ab => {
+        const codigo = ab.codigo ? `<code style="font-size:10px;background:#f5f5f5;padding:1px 4px;border-radius:3px;margin-right:4px">${escH(ab.codigo)}</code>` : '';
+        const checked = yaSel.has(ab.id) ? 'checked' : '';
+        checksHtml += `<label style="display:block;padding:3px 6px;cursor:pointer;font-size:12px">
+          <input type="checkbox" value="${ab.id}" ${checked} class="chkEditAB" style="margin-right:6px">
+          ${codigo}${escH(ab.nombre)}
+        </label>`;
+      });
+    });
+  }
+
+  const html = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:720px"><div class="modal-head"><h3>✏️ Editar Aprendizajes Base</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px"><strong>Evaluación:</strong> ${escH(ev.subtipo)} · ${escH(ev.materia)} · ${escH(ev.fecha)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Marcá los AB que esta evaluación cubre. Los cambios se aplican sobre la tabla puente evaluaciones_aprendizajes.</div>
+      <div style="border:1px solid var(--border);border-radius:6px;padding:8px;max-height:400px;overflow-y:auto;background:#fafafa">
+        ${checksHtml}
+      </div>
+      <div style="margin-top:12px;text-align:right">
+        <button class="btn btn-outline btn-sm" onclick="this.closest('.modal-overlay').remove()" style="margin-right:6px">Cancelar</button>
+        <button class="btn btn-green btn-sm" onclick="guardarABEval('${evalId}')">💾 Guardar</button>
+      </div>
+    </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function guardarABEval(evalId){
+  const ev = evaluaciones.find(e => e.id === evalId);
+  if(!ev){ alert('Evaluación no encontrada'); return; }
+  if(!sb){ alert('Sin conexión a Supabase'); return; }
+  const checks = document.querySelectorAll('.chkEditAB');
+  const nuevosIds = Array.from(checks).filter(c => c.checked).map(c => c.value);
+
+  try {
+    // Diff: calcular qué AB se agregaron y cuáles se sacaron
+    const previosIds = ev.aprendizaje_ids || [];
+    const paraAgregar = nuevosIds.filter(id => !previosIds.includes(id));
+    const paraBorrar = previosIds.filter(id => !nuevosIds.includes(id));
+
+    // Borrar los que se sacaron
+    if(paraBorrar.length){
+      const { error } = await sb.from('evaluaciones_aprendizajes')
+        .delete()
+        .eq('evaluacion_id', evalId)
+        .in('aprendizaje_id', paraBorrar);
+      if(error){ alert('❌ Error al quitar AB: ' + error.message); return; }
+    }
+
+    // Insertar los nuevos
+    if(paraAgregar.length){
+      const rows = paraAgregar.map(abId => ({ evaluacion_id: evalId, aprendizaje_id: abId }));
+      const { error } = await sb.from('evaluaciones_aprendizajes').insert(rows);
+      if(error){ alert('❌ Error al agregar AB: ' + error.message); return; }
+    }
+
+    // Actualizar cache local
+    ev.aprendizaje_ids = nuevosIds;
+    // Rellenar ev.ap con los nombres concatenados para compat
+    ev.ap = nuevosIds.map(abId => {
+      for(const arr of Object.values(aprendizajesPorMateria)){
+        const found = arr.find(a => a.id === abId);
+        if(found) return found.nombre;
+      }
+      return '';
+    }).filter(n => n).join('; ');
+
+    // Cerrar modal y refrescar
+    document.querySelector('.modal-overlay').remove();
+    cerrarModalNotas();
+    abrirCargarNotas(evalId);
+    renderDesgloseAB();
+    renderEvalList();
+  } catch(e){
+    alert('❌ Error: ' + e.message);
+  }
+}
+
+function desgloseABDeAlumno(alId,materia,grado,periodo){
   const evs=evalsDeMateria(materia,grado,periodo);
-  const vals=evs.map(e=>e.notas[alId]).filter(v=>v!==undefined&&v!==""&&v!==null).map(Number).filter(n=>!isNaN(n));
-  if(!vals.length)return null;
-  return round2(vals.reduce((a,b)=>a+b,0)/vals.length);
+  // Agrupar por aprendizaje_id (o "__sin_ab__" si no tiene AB asignado)
+  // Multi-AB: una nota única puede alimentar varios buckets si la eval evaluó varios AB
+  const porAB = {};  // { abId: { nombre, notas:[], promedio } }
+  evs.forEach(e => {
+    const v = e.notas[alId];
+    if(v === undefined || v === "" || v === null) return;
+    const n = Number(v);
+    if(isNaN(n)) return;
+    const abIds = (e.aprendizaje_ids && e.aprendizaje_ids.length) ? e.aprendizaje_ids : ['__sin_ab__'];
+    abIds.forEach(abId => {
+      if(!porAB[abId]){
+        // Resolver el nombre del AB
+        let nombre = '(Sin AB asignado)';
+        if(abId !== '__sin_ab__'){
+          for(const arr of Object.values(aprendizajesPorMateria)){
+            const found = arr.find(a => a.id === abId);
+            if(found){ nombre = found.nombre; break; }
+          }
+        }
+        porAB[abId] = {
+          aprendizaje_id: abId === '__sin_ab__' ? null : abId,
+          nombre: nombre,
+          notas: [],
+          promedio: null
+        };
+      }
+      porAB[abId].notas.push(n);
+    });
+  });
+  // Calcular promedio de cada AB
+  Object.values(porAB).forEach(ab => {
+    ab.promedio = round2(ab.notas.reduce((a,b)=>a+b,0) / ab.notas.length);
+  });
+  return porAB;
+}
+
+function promedioAlumnoMatPer(alId,materia,grado,periodo){
+  const desglose = desgloseABDeAlumno(alId,materia,grado,periodo);
+  const promediosDeAB = Object.values(desglose).map(ab => ab.promedio);
+  if(!promediosDeAB.length) return null;
+  return round2(promediosDeAB.reduce((a,b)=>a+b,0) / promediosDeAB.length);
 }
 function promedioAlumnoMatAnual(alId,materia,grado){
   const vals=["Primer Período","Segundo Período","Calificación Final"].map(p=>promedioAlumnoMatPer(alId,materia,grado,p)).filter(v=>v!==null);
@@ -726,9 +947,25 @@ function showTab(t){
   if(t==='cursadas'){renderPerTabs();renderCursadas();}
   if(t==='alumnos')renderAlumnos();
   if(t==='docentes')renderDocentes();
-  if(t==='informes')renderInformeAlumnoList();
+  if(t==='informes')iniciarPanelInformes();
   if(t==='auditoria')renderAuditoria();
-  if(t==='config'){apsLocal=JSON.parse(JSON.stringify(aps));renderAreaList();renderAPPanel();renderHistorialPromociones();}
+  if(t==='config'){
+    // Si no hay materia seleccionada todavía, seleccionar la primera disponible
+    if(!materiaIdSeleccionadaConfig){
+      const materiasPorGrado = window._materiasPorGrado || {};
+      const grados = Object.keys(materiasPorGrado).sort();
+      for(const g of grados){
+        const nombres = (materiasPorGrado[g]||[]).slice().sort();
+        if(nombres.length){
+          materiaIdSeleccionadaConfig = materiaIdDe(nombres[0], g);
+          break;
+        }
+      }
+    }
+    renderAreaList();
+    renderAPPanel();
+    renderHistorialPromociones();
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -822,9 +1059,191 @@ function abrirMateria(mat){
   const btnNueva = document.getElementById('btnNuevaEvalMateria');
   if(btnNueva) btnNueva.style.display = puedeEditar ? '' : 'none';
   renderEvalList();
+  renderDesgloseAB();
   document.getElementById('materiaDetalle').scrollIntoView({behavior:'smooth'});
 }
 function cerrarDetalle(){document.getElementById('materiaDetalle').style.display='none';materiaActual=null;}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DESGLOSE POR AB (vista curso / vista alumno) — PASO 3.4e
+// ════════════════════════════════════════════════════════════════════════════
+let vistaDesglose = 'curso';  // 'curso' | 'alumno'
+let alumnoDesgloseSel = null;  // id del alumno cuando vistaDesglose='alumno'
+
+function toggleDesgloseAB(){
+  const panel = document.getElementById('desgloseAbPanel');
+  const chev = document.getElementById('desgloseAbChevron');
+  if(!panel) return;
+  const abierto = panel.style.display !== 'none';
+  panel.style.display = abierto ? 'none' : 'block';
+  chev.textContent = abierto ? '▼' : '▲';
+  if(!abierto) renderDesgloseAB();
+}
+
+function setVistaDesglose(v){
+  vistaDesglose = v;
+  renderDesgloseAB();
+}
+
+function renderDesgloseAB(){
+  const cont = document.getElementById('desgloseAbContenido');
+  if(!cont || !materiaActual) return;
+  // Highlight toggle buttons
+  const btnC = document.getElementById('btnVistaCurso');
+  const btnA = document.getElementById('btnVistaAlumno');
+  const selA = document.getElementById('selAlumnoDesglose');
+  if(btnC) btnC.className = 'btn btn-xs ' + (vistaDesglose==='curso' ? 'btn-pri' : 'btn-outline');
+  if(btnA) btnA.className = 'btn btn-xs ' + (vistaDesglose==='alumno' ? 'btn-pri' : 'btn-outline');
+  if(selA) selA.style.display = vistaDesglose==='alumno' ? '' : 'none';
+
+  const evs = evalsDeMateria(materiaActual, gradoActual, periodoActual);
+  if(!evs.length){
+    cont.innerHTML = `<div style="color:var(--text3);font-style:italic;padding:10px">Sin evaluaciones cargadas en este período.</div>`;
+    return;
+  }
+  const alumnosGrado = alumnos.filter(a => a.grado === gradoActual).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  if(vistaDesglose === 'curso'){
+    renderDesgloseCurso(cont, evs, alumnosGrado);
+  } else {
+    // Llenar select de alumnos si está vacío
+    if(selA && !selA.options.length){
+      selA.innerHTML = alumnosGrado.map(a => `<option value="${a.id}">${escH(a.nombre)}</option>`).join('');
+      selA.onchange = function(){ alumnoDesgloseSel = this.value; renderDesgloseAB(); };
+    }
+    if(!alumnoDesgloseSel && alumnosGrado.length) alumnoDesgloseSel = alumnosGrado[0].id;
+    renderDesgloseAlumno(cont, evs, alumnoDesgloseSel);
+  }
+}
+
+function renderDesgloseCurso(cont, evs, alumnosGrado){
+  // Agrupar notas por AB sumando todos los alumnos
+  // Estructura: { abKey: { nombre, codigo, notas:[], alumnosConNota:Set, mejor, peor } }
+  const porAB = {};
+  evs.forEach(e => {
+    const abIds = (e.aprendizaje_ids && e.aprendizaje_ids.length) ? e.aprendizaje_ids : ['__sin_ab__'];
+    alumnosGrado.forEach(al => {
+      const v = e.notas[al.id];
+      if(v === undefined || v === "" || v === null) return;
+      const n = Number(v);
+      if(isNaN(n)) return;
+      abIds.forEach(abId => {
+        if(!porAB[abId]){
+          let nombre = '(Sin AB asignado)', codigo = '';
+          if(abId !== '__sin_ab__'){
+            for(const arr of Object.values(aprendizajesPorMateria)){
+              const found = arr.find(a => a.id === abId);
+              if(found){ nombre = found.nombre; codigo = found.codigo || ''; break; }
+            }
+          }
+          porAB[abId] = { nombre, codigo, notas:[], alumnosConNota:new Set(), nEvals:new Set() };
+        }
+        porAB[abId].notas.push(n);
+        porAB[abId].alumnosConNota.add(al.id);
+        porAB[abId].nEvals.add(e.id);
+      });
+    });
+  });
+
+  const totalAlumnos = alumnosGrado.length;
+  const abs = Object.values(porAB);
+  if(!abs.length){
+    cont.innerHTML = `<div style="color:var(--text3);font-style:italic;padding:10px">Hay evaluaciones pero ninguna tiene notas cargadas todavía.</div>`;
+    return;
+  }
+  // Ordenar: AB sin asignar al final; el resto por código/nombre
+  abs.sort((a,b) => {
+    const aSinAB = a.nombre === '(Sin AB asignado)' ? 1 : 0;
+    const bSinAB = b.nombre === '(Sin AB asignado)' ? 1 : 0;
+    if(aSinAB !== bSinAB) return aSinAB - bSinAB;
+    return (a.codigo + a.nombre).localeCompare(b.codigo + b.nombre);
+  });
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr style="background:#eef2f6;text-align:left">
+        <th style="padding:6px 8px">AB evaluado</th>
+        <th style="padding:6px 8px;text-align:center">Prom. curso</th>
+        <th style="padding:6px 8px;text-align:center">Cobertura</th>
+        <th style="padding:6px 8px;text-align:center">Mejor</th>
+        <th style="padding:6px 8px;text-align:center">Peor</th>
+        <th style="padding:6px 8px;text-align:center">#Eval</th>
+      </tr>
+    </thead><tbody>`;
+  let sumaPromAB = 0;
+  abs.forEach(ab => {
+    const prom = ab.notas.reduce((a,b)=>a+b,0) / ab.notas.length;
+    sumaPromAB += prom;
+    const mejor = Math.max(...ab.notas);
+    const peor = Math.min(...ab.notas);
+    const cobertura = `${ab.alumnosConNota.size}/${totalAlumnos}`;
+    const promColor = prom >= 7 ? '#2e5e3f' : prom >= 6 ? '#c9b06a' : '#a34434';
+    html += `<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:6px 8px">${ab.codigo ? `<code style="background:#f5f5f5;padding:1px 4px;border-radius:3px;font-size:10px;margin-right:4px">${escH(ab.codigo)}</code>` : ''}${escH(ab.nombre)}</td>
+      <td style="padding:6px 8px;text-align:center;font-weight:700;color:${promColor}">${round2(prom).toFixed(2)}</td>
+      <td style="padding:6px 8px;text-align:center;color:var(--text2)">${cobertura}</td>
+      <td style="padding:6px 8px;text-align:center;color:#2e5e3f">${mejor}</td>
+      <td style="padding:6px 8px;text-align:center;color:#a34434">${peor}</td>
+      <td style="padding:6px 8px;text-align:center;color:var(--text2)">${ab.nEvals.size}</td>
+    </tr>`;
+  });
+  const promCurso = round2(sumaPromAB / abs.length);
+  html += `<tr style="background:#f5f8fa;font-weight:700">
+    <td style="padding:8px;text-align:right">Promedio del curso en el período →</td>
+    <td style="padding:8px;text-align:center;color:#1a4b7a">${promCurso.toFixed(2)}</td>
+    <td colspan="4"></td>
+  </tr></tbody></table>
+  <div style="margin-top:8px;font-size:11px;color:var(--text3)">
+    💡 El promedio del período se calcula como promedio de los promedios de cada AB (Res 4778/26).
+  </div>`;
+  cont.innerHTML = html;
+}
+
+function renderDesgloseAlumno(cont, evs, alumnoId){
+  const al = alumnos.find(a => a.id === alumnoId);
+  if(!al){
+    cont.innerHTML = `<div style="color:var(--text3);font-style:italic;padding:10px">Seleccioná un alumno.</div>`;
+    return;
+  }
+  const desglose = desgloseABDeAlumno(al.id, materiaActual, gradoActual, periodoActual);
+  const abs = Object.values(desglose);
+  if(!abs.length){
+    cont.innerHTML = `<div style="color:var(--text3);font-style:italic;padding:10px">Sin notas cargadas para <strong>${escH(al.nombre)}</strong> en este período.</div>`;
+    return;
+  }
+  abs.sort((a,b) => {
+    const aSinAB = a.nombre === '(Sin AB asignado)' ? 1 : 0;
+    const bSinAB = b.nombre === '(Sin AB asignado)' ? 1 : 0;
+    if(aSinAB !== bSinAB) return aSinAB - bSinAB;
+    return a.nombre.localeCompare(b.nombre);
+  });
+  let html = `<div style="margin-bottom:8px;padding:6px 8px;background:#eef2f6;border-radius:4px;font-size:12px"><strong>Alumno:</strong> ${escH(al.nombre)}</div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr style="background:#eef2f6;text-align:left">
+        <th style="padding:6px 8px">AB evaluado</th>
+        <th style="padding:6px 8px">Notas</th>
+        <th style="padding:6px 8px;text-align:center">Promedio AB</th>
+      </tr>
+    </thead><tbody>`;
+  let suma = 0;
+  abs.forEach(ab => {
+    const promColor = ab.promedio >= 7 ? '#2e5e3f' : ab.promedio >= 6 ? '#c9b06a' : '#a34434';
+    suma += ab.promedio;
+    html += `<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:6px 8px">${escH(ab.nombre)}</td>
+      <td style="padding:6px 8px;color:var(--text2)">${ab.notas.join(', ')}</td>
+      <td style="padding:6px 8px;text-align:center;font-weight:700;color:${promColor}">${ab.promedio.toFixed(2)}</td>
+    </tr>`;
+  });
+  const promAlumno = round2(suma / abs.length);
+  const promColor = promAlumno >= 7 ? '#2e5e3f' : promAlumno >= 6 ? '#c9b06a' : '#a34434';
+  html += `<tr style="background:#f5f8fa;font-weight:700">
+    <td style="padding:8px;text-align:right" colspan="2">Promedio del período →</td>
+    <td style="padding:8px;text-align:center;color:${promColor}">${promAlumno.toFixed(2)}</td>
+  </tr></tbody></table>`;
+  cont.innerHTML = html;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONVIVENCIA
@@ -860,28 +1279,37 @@ function renderEvalList(){
     const vals=Object.values(ev.notas).filter(v=>v!==""&&v!==null&&v!==undefined).map(Number);
     const prom=vals.length?round2(vals.reduce((a,b)=>a+b,0)/vals.length):null;
     const aus=(ev.ausentes||[]).length;
-    html+=`<div class="eval-item" onclick="abrirCargarNotas(${ev.id})">
+    html+=`<div class="eval-item" onclick="abrirCargarNotas('${ev.id}')">
       <div class="eval-date">${ev.fecha||'Sin fecha'}</div>
       <div class="eval-tipo"><span class="${tipoInfo.css}">${ev.subtipo||tipoInfo.label}</span></div>
-      <div class="eval-desc">${escH(ev.descripcion||'Sin descripción')}${ev.ap?` <span style="font-size:11px;color:var(--purple)">(AP: ${escH(ev.ap)})</span>`:''}</div>
+      <div class="eval-desc">${escH(ev.descripcion||'Sin descripción')}${(ev.aprendizaje_ids && ev.aprendizaje_ids.length) ? `<div style="margin-top:3px">${renderAbChips(ev.aprendizaje_ids)}</div>` : ''}</div>
       <div class="eval-stats">
         <span>📝 <strong>${notasCargadas}/${fils.length}</strong></span>
         <span>📊 <strong class="${notaCls(prom)}" style="color:${notaColor(prom)}">${formatN(prom)}</strong></span>
         ${aus?`<span style="color:var(--red)">🚫 ${aus} aus.</span>`:''}
       </div>
-      <button class="btn btn-pri btn-xs" onclick="event.stopPropagation();abrirCargarNotas(${ev.id})" title="Editar notas">✏️</button>
-      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();eliminarEval(${ev.id})" title="Eliminar">🗑️</button>
+      <button class="btn btn-pri btn-xs" onclick="event.stopPropagation();abrirCargarNotas('${ev.id}')" title="Editar notas">✏️</button>
+      ${esAdminDirCoord() ? `<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();eliminarEval('${ev.id}')" title="Eliminar">🗑️</button>` : ''}
     </div>`;
   });
   document.getElementById('evalList').innerHTML=html;
 }
 
+// PASO 3.4d — eliminar evaluación: SOLO admin/dir/coord (docentes NO pueden borrar)
 function eliminarEval(id){
+  if(!esAdminDirCoord()){ alert('⛔ Los docentes no pueden borrar evaluaciones. Pedí a Dirección o Coordinación.'); return; }
   const ev=evaluaciones.find(e=>e.id===id);
   const desc=ev?`Eliminar evaluación: ${ev.subtipo} - ${ev.materia} (${ev.fecha})`:'Eliminar evaluación';
-  accionProtegida(()=>{
-    if(!confirm('¿Eliminar esta evaluación?'))return;
-    evaluaciones=evaluaciones.filter(e=>e.id!==id);guardarTodo();renderEvalList();renderCursadas();
+  accionProtegida(async ()=>{
+    if(!confirm('¿Eliminar esta evaluación y todas sus notas? Esta acción no se puede deshacer.'))return;
+    if(!sb) return;
+    try {
+      // DELETE en evaluaciones (ON DELETE CASCADE borra las notas asociadas)
+      const { error } = await sb.from('evaluaciones').delete().eq('id', id);
+      if(error){ alert('❌ No se pudo borrar: ' + error.message); return; }
+      evaluaciones = evaluaciones.filter(e => e.id !== id);
+      renderEvalList(); renderDesgloseAB(); renderCursadas();
+    } catch(e){ alert('❌ Error: ' + e.message); }
   }, desc);
 }
 
@@ -890,10 +1318,9 @@ function eliminarEval(id){
 // ════════════════════════════════════════════════════════════════════════════
 function abrirNuevaEval(){
   const mats=Object.keys(aps);
-  const apsList=materiaActual?(aps[materiaActual]||[]):[];
   const today=new Date().toISOString().split('T')[0];
   let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-  <div class="modal"><div class="modal-head"><h3>+ Nueva Evaluación</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal" style="max-width:720px"><div class="modal-head"><h3>+ Nueva Evaluación</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
   <div class="modal-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Materia</label>
@@ -908,10 +1335,15 @@ function abrirNuevaEval(){
         </select></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subtipo</label>
         <select class="sel" id="ne_subtipo" style="width:100%"></select></div>
-      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">AP relacionado (opcional)</label>
-        <select class="sel" id="ne_ap" style="width:100%"><option value="">— Ninguno —</option></select></div>
-      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Descripción / Contenidos</label>
-        <input class="inp" id="ne_desc" placeholder="Ej: Fracciones y decimales" style="width:100%"></div>
+      <div style="grid-column:span 2"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Descripción / Contenidos</label>
+        <input class="inp" id="ne_desc" placeholder="Ej: Fracciones y decimales, Lectura de poesía oral..." style="width:100%"></div>
+      <div style="grid-column:span 2">
+        <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span>Aprendizajes Base que evalúa <span style="color:var(--text3);font-weight:400">(opcional — elegí uno o varios)</span></span>
+          <span style="font-size:11px;color:var(--text3)" id="ne_ap_count">0 seleccionados</span>
+        </label>
+        <div id="ne_ap_checks" style="border:1px solid var(--border);border-radius:6px;padding:8px;max-height:260px;overflow-y:auto;background:#fafafa;font-size:12px"></div>
+      </div>
     </div>
     <div style="margin-top:16px;text-align:right"><button class="btn btn-green" onclick="crearEval()">Crear evaluación</button></div>
   </div></div></div>`;
@@ -923,26 +1355,112 @@ function updateSubtipos(){
   const info=TIPOS_EVAL.find(t=>t.id===tipo);
   document.getElementById('ne_subtipo').innerHTML=info.subtypes.map(s=>`<option>${s}</option>`).join('');
 }
-function updateAPSelect(){
-  const mat=document.getElementById('ne_mat').value;
-  const apsl=aps[mat]||[];
-  document.getElementById('ne_ap').innerHTML=`<option value="">— Ninguno —</option>`+apsl.map(a=>`<option>${a}</option>`).join('');
+function updateAPSelect(seleccionadosIniciales){
+  // Multi-select con checkboxes agrupados por eje.
+  // Opcionalmente recibe array de uuids ya seleccionados (para editar una eval existente).
+  const mat = document.getElementById('ne_mat').value;
+  const abList = aprendizajesDe(mat, gradoActual);
+  const cont = document.getElementById('ne_ap_checks');
+  const yaSeleccionados = new Set(seleccionadosIniciales || []);
+  if(!abList.length){
+    cont.innerHTML = `<div style="color:var(--text3);font-style:italic;padding:4px">Sin AB cargados para ${escH(mat)} ${escH(gradoActual)}. Podés crear la evaluación sin AB o cargar AB desde el tab Config.</div>`;
+    actualizarContadorAB();
+    return;
+  }
+  // Agrupar por eje
+  const porEje = {};
+  abList.forEach(ab => {
+    const k = ab.eje + (ab.sub_eje ? ' · ' + ab.sub_eje : '');
+    if(!porEje[k]) porEje[k] = [];
+    porEje[k].push(ab);
+  });
+  let html = '';
+  Object.keys(porEje).forEach(eje => {
+    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #eee;first-child:border-top:none">
+      <div style="font-weight:700;color:#4a7ba3;font-size:11px;margin-bottom:3px">${escH(eje)}</div>`;
+    porEje[eje].forEach(ab => {
+      const checked = yaSeleccionados.has(ab.id) ? 'checked' : '';
+      const codigo = ab.codigo ? `<code style="font-size:10px;background:#eee;padding:0 3px;border-radius:3px;margin-right:3px">${escH(ab.codigo)}</code>` : '';
+      html += `<label style="display:flex;align-items:flex-start;gap:6px;padding:3px 4px;cursor:pointer;border-radius:3px" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='transparent'">
+        <input type="checkbox" class="ne_ap_cb" value="${ab.id}" ${checked} onchange="actualizarContadorAB()" style="margin-top:3px">
+        <span>${codigo}${escH(ab.nombre)}</span>
+      </label>`;
+    });
+    html += `</div>`;
+  });
+  cont.innerHTML = html;
+  actualizarContadorAB();
 }
-function crearEval(){
+
+function actualizarContadorAB(){
+  const checks = document.querySelectorAll('.ne_ap_cb:checked');
+  const el = document.getElementById('ne_ap_count');
+  if(el) el.textContent = `${checks.length} seleccionado${checks.length===1?'':'s'}`;
+}
+
+function obtenerABSeleccionados(){
+  return Array.from(document.querySelectorAll('.ne_ap_cb:checked')).map(c => c.value);
+}
+async function crearEval(){
   const mat=document.getElementById('ne_mat').value;
   const fecha=document.getElementById('ne_fecha').value;
   const tipo=document.getElementById('ne_tipo').value;
   const subtipo=document.getElementById('ne_subtipo').value;
-  const ap=document.getElementById('ne_ap').value;
+  const abIds = obtenerABSeleccionados();   // array de uuids (puede estar vacío)
   const desc=document.getElementById('ne_desc').value.trim();
-  const ev={id:nextEvalId++,materia:mat,grado:gradoActual,periodo:periodoActual,tipo,subtipo,descripcion:desc,fecha,ap,notas:{},ausentes:[]};
-  evaluaciones.push(ev);guardarTodo();
-  document.querySelector('.modal-overlay').remove();
-  materiaActual=mat;
-  document.getElementById('materiaDetalle').style.display='';
-  document.getElementById('materiaDetalleTitle').textContent=`${mat} · ${periodoActual} · ${gradoActual}`;
-  renderEvalList();renderCursadas();
-  abrirCargarNotas(ev.id);
+  if(!sb){ alert('Sin conexión a Supabase'); return; }
+  try {
+    // 1) INSERT en evaluaciones (sin aprendizaje_id — ahora la relación va en tabla many-to-many)
+    const { data, error } = await sb.from('evaluaciones').insert({
+      materia:        mat,
+      grado:          gradoActual,
+      periodo:        periodoActual,
+      tipo,
+      subtipo,
+      descripcion:    desc,
+      fecha,
+      docente_id:     usuarioLog ? usuarioLog.id : null,
+      docente_email:  usuarioActual ? usuarioActual.email : null
+    }).select().single();
+    if(error){ alert('❌ No se pudo crear la evaluación: ' + error.message); return; }
+
+    // 2) INSERT múltiples en evaluaciones_aprendizajes (si eligió AB)
+    if(abIds.length){
+      const filas = abIds.map(abId => ({ evaluacion_id: data.id, aprendizaje_id: abId }));
+      const { error: errLink } = await sb.from('evaluaciones_aprendizajes').insert(filas);
+      if(errLink){
+        alert('⚠️ Evaluación creada pero no se pudieron asociar los AB: ' + errLink.message);
+      }
+    }
+
+    // 3) Resolver nombres de los AB para mostrar en la UI
+    const nombres = [];
+    abIds.forEach(abId => {
+      for(const arr of Object.values(aprendizajesPorMateria)){
+        const found = arr.find(a => a.id === abId);
+        if(found){ nombres.push(found.nombre); break; }
+      }
+    });
+
+    // 4) Agregar al cache local
+    const ev = {
+      id: data.id, materia: data.materia, grado: data.grado, periodo: data.periodo,
+      tipo: data.tipo, subtipo: data.subtipo, descripcion: data.descripcion || '',
+      fecha: data.fecha, aprendizaje_ids: abIds, ap: nombres.join(' + '),
+      ano_escolar: data.ano_escolar,
+      docente_email: data.docente_email,
+      notas: {}, ausentes: [], _notaIds: {}
+    };
+    evaluaciones.push(ev);
+    document.querySelector('.modal-overlay').remove();
+    materiaActual = mat;
+    document.getElementById('materiaDetalle').style.display='';
+    document.getElementById('materiaDetalleTitle').textContent = `${mat} · ${periodoActual} · ${gradoActual}`;
+    renderEvalList(); renderDesgloseAB(); renderCursadas();
+    abrirCargarNotas(ev.id);
+  } catch(e){
+    alert('❌ Error creando evaluación: ' + e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -950,30 +1468,31 @@ function crearEval(){
 // ════════════════════════════════════════════════════════════════════════════
 function abrirCargarNotas(evalId){
   const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
+  // PASO 3.4d — definir puedeEditar (faltaba) para los permisos de la grilla
+  const puedeEditar = puedoEditarMateriaEnGrado(ev.materia, ev.grado);
   const fils=alumnos.filter(a=>a.grado===ev.grado).sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const tipoInfo=TIPOS_EVAL.find(t=>t.id===ev.tipo)||TIPOS_EVAL[0];
   const mats=Object.keys(aps);
   const apsl=aps[ev.materia]||[];
   let html=`<div class="modal-overlay" id="modalNotas" onclick="if(event.target===this)cerrarModalNotas()">
-  <div class="modal"><div class="modal-head"><h3>📝 ${escH(ev.descripcion||ev.subtipo)}</h3><button class="modal-close" onclick="cerrarModalNotas()">✕</button></div>
+  <div class="modal"><div class="modal-head"><h3>📝 ${escH(ev.descripcion||ev.subtipo)}${puedeEditar?'':' <span style=\"background:#e0e0e0;color:#555;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:700\">LECTURA</span>'}</h3><button class="modal-close" onclick="cerrarModalNotas()">✕</button></div>
   <div class="modal-body">
     <!-- Datos editables de la evaluación -->
-    <details style="margin-bottom:14px;border:1px solid var(--border);border-radius:8px;padding:10px">
+    <details style="margin-bottom:14px;border:1px solid var(--border);border-radius:8px;padding:10px" ${puedeEditar?'':'disabled'}>
       <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--pri)">✏️ Editar datos de esta evaluación</summary>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
         <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Fecha</label>
-          <input type="date" class="inp" value="${ev.fecha}" style="width:100%" onchange="editarEvalCampo(${ev.id},'fecha',this.value)"></div>
+          <input type="date" class="inp" value="${ev.fecha}" style="width:100%" ${puedeEditar?`onchange="editarEvalCampo('${ev.id}','fecha',this.value)"`:'readonly disabled'}></div>
         <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Tipo</label>
-          <select class="sel" style="width:100%" onchange="editarEvalCampo(${ev.id},'tipo',this.value);editarEvalCampo(${ev.id},'subtipo',this.options[this.selectedIndex].getAttribute('data-sub'))">
+          <select class="sel" style="width:100%" ${puedeEditar?`onchange="editarEvalCampo('${ev.id}','tipo',this.value);editarEvalCampo('${ev.id}','subtipo',this.options[this.selectedIndex].getAttribute('data-sub'))"`:'disabled'}>
             ${TIPOS_EVAL.flatMap(t=>t.subtypes.map(s=>`<option value="${t.id}" data-sub="${s}"${ev.subtipo===s?' selected':''}>${s}</option>`)).join('')}
           </select></div>
         <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Descripción / Contenidos</label>
-          <input class="inp" value="${escH(ev.descripcion||'')}" style="width:100%" onchange="editarEvalCampo(${ev.id},'descripcion',this.value)"></div>
-        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">AP relacionado</label>
-          <select class="sel" style="width:100%" onchange="editarEvalCampo(${ev.id},'ap',this.value)">
-            <option value="">— Ninguno —</option>
-            ${apsl.map(a=>`<option${ev.ap===a?' selected':''}>${a}</option>`).join('')}
-          </select></div>
+          <input class="inp" value="${escH(ev.descripcion||'')}" style="width:100%" ${puedeEditar?`onchange="editarEvalCampo('${ev.id}','descripcion',this.value)"`:'readonly disabled'}></div>
+        <div style="grid-column:span 2"><label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Aprendizajes Base evaluados ${puedeEditar?`<button class="btn btn-outline btn-xs" style="margin-left:8px" onclick="abrirEditarABEval('${ev.id}')">✏️ Editar AB</button>`:''}</label>
+          <div style="padding:6px;background:#fafafa;border:1px solid var(--border);border-radius:4px;min-height:28px;font-size:12px">
+            ${(ev.aprendizaje_ids && ev.aprendizaje_ids.length) ? renderAbChips(ev.aprendizaje_ids) : '<span style="color:var(--text3);font-style:italic">— Sin AB asignados —</span>'}
+          </div></div>
       </div>
     </details>
 
@@ -981,7 +1500,7 @@ function abrirCargarNotas(evalId){
       <span class="${tipoInfo.css}">${ev.subtipo}</span>
       <span>📅 ${ev.fecha}</span>
       <span>📚 ${ev.materia}</span>
-      ${ev.ap?`<span style="color:var(--purple)">AP: ${ev.ap}</span>`:''}
+      ${(ev.aprendizaje_ids && ev.aprendizaje_ids.length) ? renderAbChips(ev.aprendizaje_ids) : ''}
       <span style="margin-left:auto;font-size:11px;color:var(--text3)">Modificá las notas directamente · Borrá con ✕</span>
     </div>
     <table><thead><tr>
@@ -999,13 +1518,14 @@ function abrirCargarNotas(evalId){
     const notaDisabled = aus || !puedeEditar;
     const notaStyle = (aus || !puedeEditar) ? 'opacity:.5;cursor:not-allowed' : '';
     const inputAttrs = puedeEditar
-      ? `onchange="guardarNotaEval(${evalId},${al.id},this.value)" ${aus?'disabled style="opacity:.3"':''}`
+      ? `onchange="guardarNotaEval('${evalId}','${al.id}',this.value)" ${aus?'disabled style="opacity:.3"':''}`
       : `readonly disabled style="${notaStyle}"`;
     const checkAttrs = puedeEditar
-      ? `${aus?'checked':''} onchange="toggleAusente(${evalId},${al.id},this.checked)"`
+      ? `${aus?'checked':''} onchange="toggleAusente('${evalId}','${al.id}',this.checked)"`
       : `${aus?'checked':''} disabled`;
-    const btnBorrar = (tieneNota && puedeEditar)
-      ? `<button class="btn btn-red btn-xs" onclick="borrarNotaEval(${evalId},${al.id})" title="Borrar nota">✕</button>`
+    // PASO 3.4d — botón ✕ Borrar nota solo visible para admin/dir/coord (docentes no pueden borrar)
+    const btnBorrar = (tieneNota && puedeEditar && esAdminDirCoord())
+      ? `<button class="btn btn-red btn-xs" onclick="borrarNotaEval('${evalId}',${al.id})" title="Borrar nota">✕</button>`
       : '—';
     html+=`<tr>
       <td class="center" style="color:var(--text3)">${i+1}</td>
@@ -1017,7 +1537,7 @@ function abrirCargarNotas(evalId){
   });
   html+=`</tbody></table>
     <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
-      <button class="btn btn-red btn-sm" onclick="if(confirm('¿Eliminar TODA esta evaluación y sus notas?')){eliminarEval(${ev.id});cerrarModalNotas();}">🗑️ Eliminar evaluación completa</button>
+      ${esAdminDirCoord() ? `<button class="btn btn-red btn-sm" onclick="if(confirm('¿Eliminar TODA esta evaluación y sus notas?')){eliminarEval('${ev.id}');cerrarModalNotas();}">🗑️ Eliminar evaluación completa</button>` : ''}
       <button class="btn btn-green" onclick="cerrarModalNotas()">✅ Listo</button>
     </div>
   </div></div></div>`;
@@ -1026,49 +1546,155 @@ function abrirCargarNotas(evalId){
 
 function cerrarModalNotas(){
   const m=document.getElementById('modalNotas');if(m)m.remove();
-  renderEvalList();renderCursadas();
+  renderEvalList(); renderDesgloseAB(); renderCursadas();
 }
 
-function editarEvalCampo(evalId,campo,valor){
+async function editarEvalCampo(evalId,campo,valor){
   const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
-  ev[campo]=valor;guardarTodo();
+  if(!sb) return;
+  try {
+    const payload = {}; payload[campo] = valor;
+    const { error } = await sb.from('evaluaciones').update(payload).eq('id', evalId);
+    if(error){ alert('❌ No se pudo guardar: ' + error.message); return; }
+    ev[campo] = valor;
+  } catch(e){ alert('❌ Error: ' + e.message); }
 }
 
-function borrarNotaEval(evalId,alId){
-  const evB=evaluaciones.find(e=>e.id===evalId);
-  const alB=alumnos.find(a=>a.id===alId);
-  const descB=`Borrar nota: ${alB?alB.nombre:'?'} en ${evB?evB.materia+' - '+evB.subtipo:'?'}`;
-  accionProtegida(()=>{
-    const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
-    delete ev.notas[alId];guardarTodo();
-    cerrarModalNotas();abrirCargarNotas(evalId);
+// PASO 3.4d — borrar nota: SOLO admin/dir/coord (RLS lo refuerza; aquí también se chequea en UI)
+function borrarNotaEval(evalId, alId){
+  if(!esAdminDirCoord()){ alert('⛔ Los docentes no pueden borrar notas. Pedí a Dirección o Coordinación.'); return; }
+  const ev = evaluaciones.find(e => e.id === evalId); if(!ev) return;
+  const al = alumnos.find(a => a.id === alId);
+  const anterior = ev.notas[alId];
+  const descB = `Borrar nota: ${al ? al.nombre : '?'} en ${ev.materia} - ${ev.subtipo || ev.descripcion || ''}`;
+  accionProtegida(async () => {
+    const notaRowId = ev._notaIds && ev._notaIds[alId];
+    if(!notaRowId){ delete ev.notas[alId]; cerrarModalNotas(); abrirCargarNotas(evalId); return; }
+    try {
+      const { error } = await sb.from('notas').delete().eq('id', notaRowId);
+      if(error){ alert('❌ No se pudo borrar: ' + error.message); return; }
+      await registrarCambioNota({
+        nota_id: notaRowId, evaluacion_id: evalId, alumno_id: alId,
+        nota_anterior: anterior, nota_nueva: null,
+        ausente_anterior: false, ausente_nuevo: false,
+        motivo: window._ultimoMotivo || 'Borrado'
+      });
+      delete ev.notas[alId];
+      delete ev._notaIds[alId];
+      cerrarModalNotas(); abrirCargarNotas(evalId);
+    } catch(e){ alert('❌ Error: ' + e.message); }
   }, descB);
 }
-function guardarNotaEval(evalId,alId,val){
-  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
-  const anterior=ev.notas[alId];
-  const tieneAnterior=anterior!==undefined&&anterior!==""&&anterior!==null;
-  if(tieneAnterior&&val!==String(anterior)){
-    // Modificar nota existente → requiere autorización
-    const alN=alumnos.find(a=>a.id===alId);
-    accionProtegida(()=>{
-      ev.notas[alId]=val===""?"":round2(parseFloat(val));
-      guardarTodo();
-    },`Modificar nota: ${alN?alN.nombre:'?'} en ${ev.materia} - ${ev.subtipo} (${anterior} → ${val})`);
-  }else{
-    // Nota nueva (primera vez) → sin protección
-    ev.notas[alId]=val===""?"":round2(parseFloat(val));
-    guardarTodo();
+
+async function guardarNotaEval(evalId, alId, val){
+  const ev = evaluaciones.find(e => e.id === evalId); if(!ev) return;
+  const anterior = ev.notas[alId];
+  const tieneAnterior = anterior !== undefined && anterior !== "" && anterior !== null;
+  const nuevaNum = val === "" ? null : round2(parseFloat(val));
+  if(tieneAnterior && String(nuevaNum) !== String(anterior)){
+    // Modificar nota existente → PIDE motivo y registra en notas_historial
+    const al = alumnos.find(a => a.id === alId);
+    accionProtegida(async () => {
+      await persistirNota(ev, alId, nuevaNum, false, true, anterior);
+    }, `Modificar nota: ${al ? al.nombre : '?'} en ${ev.materia} - ${ev.subtipo || ev.descripcion || ''} (${anterior} → ${val})`);
+  } else {
+    // Nota nueva o misma → directo, sin motivo
+    await persistirNota(ev, alId, nuevaNum, false, false, anterior);
   }
 }
-function toggleAusente(evalId,alId,checked){
-  const ev=evaluaciones.find(e=>e.id===evalId);if(!ev)return;
-  if(!ev.ausentes)ev.ausentes=[];
-  if(checked){ev.ausentes.push(alId);delete ev.notas[alId];}
-  else{ev.ausentes=ev.ausentes.filter(id=>id!==alId);}
-  const inp=document.getElementById(`nota_${evalId}_${alId}`);
-  if(inp){inp.disabled=checked;inp.style.opacity=checked?'.3':'1';if(checked)inp.value='';}
-  guardarTodo();
+
+async function toggleAusente(evalId, alId, checked){
+  const ev = evaluaciones.find(e => e.id === evalId); if(!ev) return;
+  if(!ev.ausentes) ev.ausentes = [];
+  const anteriorAusente = ev.ausentes.includes(alId);
+  const anteriorNota = ev.notas[alId];
+  // Actualizar UI inmediata
+  const inp = document.getElementById(`nota_${evalId}_${alId}`);
+  if(inp){ inp.disabled = checked; inp.style.opacity = checked ? '.3' : '1'; if(checked) inp.value = ''; }
+  // Si marco ausente estando con nota cargada → PIDE motivo (cambia la nota efectiva)
+  const esModif = checked && anteriorNota !== undefined && anteriorNota !== null && anteriorNota !== '';
+  if(esModif){
+    const al = alumnos.find(a => a.id === alId);
+    accionProtegida(async () => {
+      await persistirNota(ev, alId, null, true, true, anteriorNota);
+    }, `Marcar ausente a: ${al ? al.nombre : '?'} en ${ev.materia} (tenía nota ${anteriorNota})`);
+  } else {
+    await persistirNota(ev, alId, null, checked, false, anteriorNota);
+  }
+}
+
+// Helper central: upsert en notas (INSERT si no existe fila, UPDATE si existe)
+// + opcional registro en notas_historial si esModificacion=true
+async function persistirNota(ev, alId, nuevaNota, ausente, esModificacion, anteriorNota){
+  if(!sb) return;
+  try {
+    const existingId = ev._notaIds && ev._notaIds[alId];
+    const payload = {
+      evaluacion_id: ev.id,
+      alumno_id:     alId,
+      nota:          ausente ? null : nuevaNota,
+      ausente:       !!ausente,
+      docente_id:    usuarioLog ? usuarioLog.id : null,
+      docente_email: usuarioActual ? usuarioActual.email : null
+    };
+    let notaIdFinal = existingId;
+    if(existingId){
+      const { error } = await sb.from('notas').update(payload).eq('id', existingId);
+      if(error){ alert('❌ No se pudo guardar: ' + error.message); return; }
+    } else {
+      const { data, error } = await sb.from('notas').insert(payload).select().single();
+      if(error){ alert('❌ No se pudo guardar: ' + error.message); return; }
+      notaIdFinal = data.id;
+      if(!ev._notaIds) ev._notaIds = {};
+      ev._notaIds[alId] = notaIdFinal;
+    }
+    // Actualizar cache local
+    if(ausente){
+      if(!ev.ausentes.includes(alId)) ev.ausentes.push(alId);
+      delete ev.notas[alId];
+    } else {
+      ev.ausentes = ev.ausentes.filter(id => id !== alId);
+      if(nuevaNota !== null && nuevaNota !== undefined) ev.notas[alId] = nuevaNota;
+      else delete ev.notas[alId];
+    }
+    // Registrar en historial si es modificación
+    if(esModificacion){
+      await registrarCambioNota({
+        nota_id:          notaIdFinal,
+        evaluacion_id:    ev.id,
+        alumno_id:        alId,
+        nota_anterior:    anteriorNota !== undefined && anteriorNota !== '' ? anteriorNota : null,
+        nota_nueva:       ausente ? null : nuevaNota,
+        ausente_anterior: ev.ausentes.includes(alId) ? false : (anteriorNota == null),
+        ausente_nuevo:    !!ausente,
+        motivo:           window._ultimoMotivo || 'Modificación'
+      });
+    }
+    renderCursadas();
+  } catch(e){ alert('❌ Error: ' + e.message); }
+}
+
+// Registra un cambio de nota en public.notas_historial
+async function registrarCambioNota(datos){
+  if(!sb) return;
+  try {
+    const { error } = await sb.from('notas_historial').insert({
+      nota_id:          datos.nota_id || null,
+      evaluacion_id:    datos.evaluacion_id || null,
+      alumno_id:        datos.alumno_id || null,
+      nota_anterior:    datos.nota_anterior,
+      nota_nueva:       datos.nota_nueva,
+      ausente_anterior: datos.ausente_anterior,
+      ausente_nuevo:    datos.ausente_nuevo,
+      motivo:           datos.motivo || 'Sin motivo registrado',
+      motivo_detalle:   datos.motivo_detalle || null,
+      docente_id:       usuarioLog ? usuarioLog.id : null,
+      docente_email:    usuarioActual ? usuarioActual.email : null,
+      docente_nombre:   usuarioActual ? usuarioActual.nombre : null
+    });
+    if(error) console.warn('⚠ No se pudo registrar en historial:', error.message);
+    else console.log('📜 Cambio registrado en notas_historial');
+  } catch(e){ console.warn('⚠ Error registrando historial:', e.message); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1283,35 +1909,160 @@ function eliminarDocente(id){
   guardarTodo();renderDocentes();
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// CRUD de docente_asignaciones — PASO 3.4c UI (admin/dir/coord)
+// ════════════════════════════════════════════════════════════════════════════
+
+// Abre el modal de asignaciones del docente. Lee las asignaciones vigentes
+// desde la variable `docentes[].asignaciones` (que se cargó de Supabase) y
+// permite CREAR y BORRAR filas en public.docente_asignaciones.
 function editarDocente(id){
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación pueden modificar asignaciones.'); return; }
   const doc=docentes.find(d=>d.id===id);if(!doc)return;
   const mats=Object.keys(aps);
   const asigs=doc.asignaciones||[];
-  let html=`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-  <div class="modal" style="max-width:650px"><div class="modal-head"><h3>👩‍🏫 ${escH(doc.nombre)} — Asignaciones</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div style="margin-bottom:12px">
-      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Nombre</label>
-      <input class="inp" id="edDocNombre" value="${escH(doc.nombre)}" style="width:100%" onchange="docentes.find(d=>d.id===${id}).nombre=this.value.trim();guardarTodo();">
+  const TIPOS = [
+    ['titular',       'Titular de grado'],
+    ['materia',       'Da materia'],
+    ['psicopedagoga', 'Psicopedagoga (solo lectura)'],
+    ['acceso_total',  'Acceso total (admin/dirección)'],
+    ['otro',          'Otro']
+  ];
+
+  // Lista de asignaciones actuales
+  let listaHtml = '';
+  if(asigs.length === 0){
+    listaHtml = `<div class="empty" style="padding:16px"><div class="empty-icon">📋</div>Este docente todavía no tiene asignaciones cargadas.</div>`;
+  } else {
+    listaHtml = `<table style="width:100%;font-size:13px"><thead>
+      <tr style="background:#f0f2f5"><th style="padding:6px;text-align:left">Tipo</th><th style="padding:6px;text-align:left">Grado</th><th style="padding:6px;text-align:left">Materia</th><th style="padding:6px;width:50px"></th></tr>
+    </thead><tbody>`;
+    asigs.forEach(a => {
+      const tipoLbl = (TIPOS.find(t=>t[0]===a.tipo_asignacion)||['','?'])[1];
+      listaHtml += `<tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px"><b>${tipoLbl}</b></td>
+        <td style="padding:6px">${a.grado || '—'}</td>
+        <td style="padding:6px">${escH(a.materia || '—')}</td>
+        <td style="padding:6px;text-align:center"><button class="btn btn-red btn-xs" title="Borrar esta asignación" onclick="borrarAsignacionDocente('${a.id}','${id}')">✕</button></td>
+      </tr>`;
+    });
+    listaHtml += `</tbody></table>`;
+  }
+
+  const html = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:720px">
+      <div class="modal-head">
+        <h3>👩‍🏫 ${escH(doc.nombre)} — Asignaciones</h3>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:8px;color:var(--text2);font-size:12px">
+          📧 ${escH(doc.email || '—')} · Rol: <b>${doc.rol}</b>
+        </div>
+
+        <h4 style="font-size:13px;color:var(--pri);margin:16px 0 8px 0">📋 Asignaciones actuales</h4>
+        ${listaHtml}
+
+        <h4 style="font-size:13px;color:var(--pri);margin:20px 0 8px 0">➕ Agregar nueva asignación</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+          <div>
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Tipo</label>
+            <select class="sel" id="asigNuevaTipo" style="width:100%">
+              ${TIPOS.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Grado</label>
+            <select class="sel" id="asigNuevaGrado" style="width:100%">
+              <option value="">— Grado —</option>
+              ${GRADOS.map(g=>`<option value="${g}">${g}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px">Materia (solo si tipo=Da materia)</label>
+            <select class="sel" id="asigNuevaMateria" style="width:100%">
+              <option value="">— Materia —</option>
+              ${mats.map(m=>`<option value="${escH(m)}">${escH(m)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <button class="btn btn-green btn-sm" onclick="agregarAsignacionDocente('${id}')">+ Agregar</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">
+          <b>Tip:</b> para "Titular" dejá Materia en blanco. Para "Da materia" elegí grado + materia.
+          Para "Psicopedagoga" elegí grado y dejá materia en blanco.
+        </div>
+
+        <div style="margin-top:20px;text-align:right">
+          <button class="btn btn-pri" onclick="this.closest('.modal-overlay').remove();renderDocentes();">✅ Listo</button>
+        </div>
+      </div>
     </div>
-    <h4 style="font-size:13px;color:var(--pri);margin-bottom:8px">Materias y grados asignados:</h4>
-    <div id="edDocAsigs">`;
-  asigs.forEach((a,i)=>{
-    html+=`<div class="row" style="margin-bottom:6px" id="asig_${i}">
-      <select class="sel" style="flex:1" onchange="docentes.find(d=>d.id===${id}).asignaciones[${i}].materia=this.value;guardarTodo();">
-        <option value="">— Materia —</option>${mats.map(m=>`<option${a.materia===m?' selected':''}>${m}</option>`).join('')}
-      </select>
-      <select class="sel" onchange="docentes.find(d=>d.id===${id}).asignaciones[${i}].grado=this.value;guardarTodo();">
-        <option value="">— Grado —</option>${GRADOS.map(g=>`<option${a.grado===g?' selected':''}>${g}</option>`).join('')}
-      </select>
-      <button class="btn btn-red btn-xs" onclick="docentes.find(d=>d.id===${id}).asignaciones.splice(${i},1);guardarTodo();this.closest('.modal-overlay').remove();editarDocente(${id});">✕</button>
-    </div>`;
-  });
-  html+=`</div>
-    <button class="btn btn-green btn-sm" style="margin-top:8px" onclick="docentes.find(d=>d.id===${id}).asignaciones.push({materia:'',grado:''});guardarTodo();this.closest('.modal-overlay').remove();editarDocente(${id});">+ Agregar asignación</button>
-    <div style="margin-top:16px;text-align:right"><button class="btn btn-pri" onclick="this.closest('.modal-overlay').remove();renderDocentes();">✅ Listo</button></div>
-  </div></div></div>`;
-  document.body.insertAdjacentHTML('beforeend',html);
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// Agrega una fila a public.docente_asignaciones y refresca el modal
+async function agregarAsignacionDocente(docId){
+  const doc = docentes.find(d => d.id === docId);
+  if(!doc){ alert('Docente no encontrado'); return; }
+  if(!sb){ alert('Sin conexión a Supabase'); return; }
+
+  const tipo    = document.getElementById('asigNuevaTipo').value;
+  const grado   = document.getElementById('asigNuevaGrado').value;
+  const materia = document.getElementById('asigNuevaMateria').value || null;
+
+  // Validación mínima
+  if(tipo === 'materia' && (!grado || !materia)){
+    alert('Para "Da materia" tenés que elegir grado Y materia.'); return;
+  }
+  if(['titular','psicopedagoga'].includes(tipo) && !grado){
+    alert('Para "' + tipo + '" tenés que elegir un grado.'); return;
+  }
+
+  try {
+    const { error } = await sb.from('docente_asignaciones').insert({
+      nombre_completo: doc.nombre,
+      email:           doc.email,
+      rol:             doc.rol === 'desarrollador' ? 'docente' : (['admin','direccion'].includes(doc.rol) ? doc.rol : 'docente'),
+      tipo_asignacion: tipo,
+      grado:           grado || null,
+      materia:         materia,
+      prioridad:       'Alta',
+      observaciones:   null
+    });
+    if(error){
+      alert('❌ No se pudo agregar: ' + error.message);
+      return;
+    }
+    console.log('✓ Asignación agregada para', doc.email);
+    // Cerrar modal, recargar datos y reabrir modal con la lista actualizada
+    document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+    await cargarDatosDesdeSupabase();
+    editarDocente(docId);
+  } catch(e){
+    alert('❌ Error: ' + e.message);
+  }
+}
+
+// Borra una fila por id, pide confirmación y refresca
+async function borrarAsignacionDocente(asigId, docId){
+  if(!confirm('¿Borrar esta asignación? Esta acción no se puede deshacer.')) return;
+  if(!sb){ alert('Sin conexión a Supabase'); return; }
+  try {
+    const { error } = await sb.from('docente_asignaciones').delete().eq('id', asigId);
+    if(error){
+      alert('❌ No se pudo borrar: ' + error.message);
+      return;
+    }
+    console.log('✓ Asignación borrada:', asigId);
+    document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+    await cargarDatosDesdeSupabase();
+    editarDocente(docId);
+  } catch(e){
+    alert('❌ Error: ' + e.message);
+  }
 }
 
 function importarDocentes(input){
@@ -1366,18 +2117,417 @@ function descargarPlantillaDocentes(){
 // ════════════════════════════════════════════════════════════════════════════
 // INFORMES
 // ════════════════════════════════════════════════════════════════════════════
-function renderInformeAlumnoList(){
-  const g=document.getElementById('infGrado').value;
-  const sel=document.getElementById('infAlumno');
-  const fils=alumnos.filter(a=>a.grado===g);
-  sel.innerHTML=`<option value="">— Seleccioná un alumno —</option>`+fils.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
+// ════════════════════════════════════════════════════════════════════════════
+// PANEL DE INFORMES — PASO 3.4e+ (5 vistas: institucional, grado, materia, alumno, AB)
+// ════════════════════════════════════════════════════════════════════════════
+let vistaInforme = null;                      // vista actual (se setea al abrir el tab)
+let filtrosInforme = {                        // filtros contextuales
+  grado: '7°', materia: null, alumnoId: null, abId: null, periodo: null
+};
+
+// Entry point: se llama cuando se abre el tab Informes
+// Grados visibles para el panel de informes:
+// admin/dir/coord/dev → TODOS los grados del colegio
+// docente/psicopedagoga → solo los suyos (misGradosVisibles)
+function gradosVisiblesInformes(){
+  if(esAdminDirCoord()){
+    // Todos los grados que existan en la tabla materias
+    const todos = Object.keys(window._materiasPorGrado || {});
+    if(todos.length) return todos.sort();
+    return ['1°','2°','3°','4°','5°','6°','7°'];
+  }
+  return (typeof misGradosVisibles === 'function') ? misGradosVisibles() : ['7°'];
 }
-function renderInforme(){
-  const alId=parseInt(document.getElementById('infAlumno').value);
-  const al=alumnos.find(a=>a.id===alId);
-  if(!al){document.getElementById('informeContent').innerHTML=`<div class="empty"><div class="empty-icon">📊</div>Seleccioná un alumno.</div>`;return;}
+
+function iniciarPanelInformes(){
+  // Elegir vista default según rol
+  if(!vistaInforme){
+    vistaInforme = esAdminDirCoord() ? 'institucional' : 'alumno';
+  }
+  // Título dinámico
+  const t = document.getElementById('tituloInformes');
+  if(t) t.textContent = esAdminDirCoord() ? '📊 Panel de informes' : '📊 Mis informes';
+  // Grado default según permisos
+  const gradosVis = gradosVisiblesInformes();
+  if(!gradosVis.includes(filtrosInforme.grado) && gradosVis.length) filtrosInforme.grado = gradosVis[0];
+  // Período default
+  if(!filtrosInforme.periodo) filtrosInforme.periodo = periodoActual || PERIODOS[0];
+  // Esconder vistas que no corresponden
+  const btnInst = document.getElementById('vistaBtn-institucional');
+  if(btnInst) btnInst.style.display = esAdminDirCoord() ? '' : 'none';
+  if(!esAdminDirCoord() && vistaInforme === 'institucional') vistaInforme = 'grado';
+  setVistaInforme(vistaInforme);
+}
+
+function setVistaInforme(v){
+  vistaInforme = v;
+  // Highlight tab activo
+  ['institucional','grado','materia','alumno','ab'].forEach(k => {
+    const b = document.getElementById('vistaBtn-'+k);
+    if(b) b.className = 'per-tab' + (k === v ? ' active' : '');
+  });
+  renderFiltrosInforme();
+  renderInformeActual();
+}
+
+function renderFiltrosInforme(){
+  const el = document.getElementById('informesFiltros');
+  if(!el) return;
+  const gradosVis = gradosVisiblesInformes();
+  const periodoOpts = PERIODOS.map(p => `<option${p===filtrosInforme.periodo?' selected':''}>${p}</option>`).join('');
+  let html = '';
+  if(['grado','materia','alumno','ab'].includes(vistaInforme)){
+    html += `<label style="font-weight:600">Grado:</label>
+      <select class="sel" style="font-size:12px;padding:3px 6px" onchange="setFiltroInforme('grado',this.value)">
+        ${gradosVis.map(g=>`<option${g===filtrosInforme.grado?' selected':''}>${g}</option>`).join('')}
+      </select>`;
+  }
+  if(['materia','ab'].includes(vistaInforme)){
+    const matsG = (window._materiasPorGrado || {})[filtrosInforme.grado] || [];
+    // Admin/dir/coord/dev y titular → todas las materias del grado
+    // Docente de materia → solo las suyas de ese grado
+    const matsFiltradas = (esAdminDirCoord() || soyTitularDe(filtrosInforme.grado))
+      ? matsG
+      : (typeof esDocenteSolo === 'function' && esDocenteSolo())
+        ? matsG.filter(m => misMateriasEnGrado(filtrosInforme.grado).includes(m))
+        : matsG;
+    if(!filtrosInforme.materia || !matsFiltradas.includes(filtrosInforme.materia)){
+      filtrosInforme.materia = matsFiltradas[0] || null;
+    }
+    html += `<label style="font-weight:600">Materia:</label>
+      <select class="sel" style="font-size:12px;padding:3px 6px" onchange="setFiltroInforme('materia',this.value)">
+        ${matsFiltradas.map(m=>`<option${m===filtrosInforme.materia?' selected':''}>${escH(m)}</option>`).join('')}
+      </select>`;
+  }
+  if(vistaInforme === 'ab'){
+    const abs = filtrosInforme.materia ? aprendizajesDe(filtrosInforme.materia, filtrosInforme.grado) : [];
+    if(abs.length && (!filtrosInforme.abId || !abs.find(a => a.id === filtrosInforme.abId))){
+      filtrosInforme.abId = abs[0].id;
+    }
+    html += `<label style="font-weight:600">AB:</label>
+      <select class="sel" style="font-size:12px;padding:3px 6px;min-width:300px" onchange="setFiltroInforme('abId',this.value)">
+        ${abs.length ? abs.map(a=>`<option value="${a.id}"${a.id===filtrosInforme.abId?' selected':''}>${a.codigo?'['+escH(a.codigo)+'] ':''}${escH(a.nombre)}</option>`).join('') : '<option>— Sin AB cargados —</option>'}
+      </select>`;
+  }
+  if(vistaInforme === 'alumno'){
+    const alsG = alumnos.filter(a => a.grado === filtrosInforme.grado).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    if(!filtrosInforme.alumnoId || !alsG.find(a => a.id === filtrosInforme.alumnoId)){
+      filtrosInforme.alumnoId = alsG.length ? alsG[0].id : null;
+    }
+    html += `<label style="font-weight:600">Alumno:</label>
+      <select class="sel" style="font-size:12px;padding:3px 6px;min-width:220px" onchange="setFiltroInforme('alumnoId',this.value)">
+        ${alsG.length ? alsG.map(a=>`<option value="${a.id}"${a.id===filtrosInforme.alumnoId?' selected':''}>${escH(a.nombre)}</option>`).join('') : '<option>— Sin alumnos —</option>'}
+      </select>`;
+  }
+  if(['institucional','grado','materia','alumno','ab'].includes(vistaInforme)){
+    html += `<label style="font-weight:600;margin-left:8px">Período:</label>
+      <select class="sel" style="font-size:12px;padding:3px 6px" onchange="setFiltroInforme('periodo',this.value)">
+        ${periodoOpts}
+      </select>`;
+  }
+  el.innerHTML = html;
+}
+
+function setFiltroInforme(k, v){
+  filtrosInforme[k] = v;
+  if(k === 'grado'){ filtrosInforme.materia = null; filtrosInforme.alumnoId = null; filtrosInforme.abId = null; }
+  if(k === 'materia'){ filtrosInforme.abId = null; }
+  renderFiltrosInforme();
+  renderInformeActual();
+}
+
+function renderInformeActual(){
+  const el = document.getElementById('informeContent');
+  if(!el) return;
+  if(vistaInforme === 'institucional') return renderInformeInstitucional(el);
+  if(vistaInforme === 'grado') return renderInformePorGrado(el);
+  if(vistaInforme === 'materia') return renderInformePorMateria(el);
+  if(vistaInforme === 'alumno') return renderInformePorAlumno(el);
+  if(vistaInforme === 'ab') return renderInformePorAB(el);
+}
+
+// ─── Vista 1: INSTITUCIONAL ─────────────────────────────────────────────────
+function renderInformeInstitucional(el){
+  const per = filtrosInforme.periodo;
+  const grados = ['1°','2°','3°','4°','5°','6°','7°'];
+  let html = `<div style="padding:16px">
+    <h3 style="margin-bottom:4px">🏫 Panorama institucional — ${escH(per)}</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px">Colegio FASTA Juan Pablo II · ${new Date().getFullYear()} · Nivel Primario</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:20px">`;
+  grados.forEach(g => {
+    const alsG = alumnos.filter(a => a.grado === g);
+    if(!alsG.length) return;
+    const matsG = (window._materiasPorGrado||{})[g] || [];
+    const proms = alsG.map(a => {
+      const promsMat = matsG.map(m => promedioAlumnoMatPer(a.id, m, g, per)).filter(v => v !== null);
+      if(!promsMat.length) return null;
+      return promsMat.reduce((x,y)=>x+y,0)/promsMat.length;
+    }).filter(v => v !== null);
+    const promGrado = proms.length ? round2(proms.reduce((a,b)=>a+b,0)/proms.length) : null;
+    const enRiesgo = proms.filter(v => v < 7).length;
+    const aprobados = proms.filter(v => v >= 7).length;
+    const pctAprob = proms.length ? Math.round(aprobados*100/proms.length) : 0;
+    const promColor = promGrado === null ? '#999' : promGrado >= 7 ? '#2e5e3f' : promGrado >= 6 ? '#c9b06a' : '#a34434';
+    html += `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;background:white">
+      <div style="font-size:14px;font-weight:700;color:#1a4b7a;margin-bottom:6px">${escH(g)} Grado</div>
+      <div style="font-size:11px;color:var(--text3)">${alsG.length} alumnos</div>
+      <div style="font-size:28px;font-weight:800;color:${promColor};margin:6px 0">${promGrado !== null ? promGrado.toFixed(2) : '—'}</div>
+      <div style="font-size:11px;color:var(--text2)">Promedio del grado</div>
+      <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;font-size:10px">
+        <span style="background:#d4edda;color:#155724;padding:2px 6px;border-radius:4px">✓ ${aprobados} aprob.</span>
+        ${enRiesgo>0?`<span style="background:#f8d7da;color:#721c24;padding:2px 6px;border-radius:4px">⚠ ${enRiesgo} en riesgo</span>`:''}
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text3)">${pctAprob}% aprobación</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Ranking de materias (de peor a mejor promedio institucional)
+  const rankingMat = {};
+  grados.forEach(g => {
+    const matsG = (window._materiasPorGrado||{})[g] || [];
+    const alsG = alumnos.filter(a => a.grado === g);
+    matsG.forEach(m => {
+      const proms = alsG.map(a => promedioAlumnoMatPer(a.id, m, g, per)).filter(v => v !== null);
+      if(!proms.length) return;
+      const pm = proms.reduce((a,b)=>a+b,0)/proms.length;
+      if(!rankingMat[m]) rankingMat[m] = { sum:0, n:0 };
+      rankingMat[m].sum += pm; rankingMat[m].n += 1;
+    });
+  });
+  const matArr = Object.entries(rankingMat).map(([m, v]) => ({m, prom: round2(v.sum/v.n)})).sort((a,b)=>a.prom-b.prom);
+  html += `<h3 style="margin-bottom:8px">📖 Materias — ranking institucional (de más floja a mejor)</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px">
+      <thead><tr style="background:#eef2f6;text-align:left">
+        <th style="padding:6px 8px">#</th><th style="padding:6px 8px">Materia</th><th style="padding:6px 8px;text-align:center">Prom. colegio</th>
+      </tr></thead><tbody>`;
+  matArr.forEach((r, i) => {
+    const color = r.prom >= 7 ? '#2e5e3f' : r.prom >= 6 ? '#c9b06a' : '#a34434';
+    html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px;color:var(--text3)">${i+1}</td><td style="padding:6px 8px">${escH(r.m)}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:${color}">${r.prom.toFixed(2)}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  // Ranking de AB más flojos (10)
+  const rankingAB = {};
+  grados.forEach(g => {
+    const matsG = (window._materiasPorGrado||{})[g] || [];
+    const alsG = alumnos.filter(a => a.grado === g);
+    matsG.forEach(m => {
+      alsG.forEach(a => {
+        const desg = desgloseABDeAlumno(a.id, m, g, per);
+        Object.values(desg).forEach(ab => {
+          const key = `${ab.nombre}||${m}||${g}`;
+          if(!rankingAB[key]) rankingAB[key] = { nombre: ab.nombre, materia: m, grado: g, notas: [] };
+          rankingAB[key].notas.push(ab.promedio);
+        });
+      });
+    });
+  });
+  const abArr = Object.values(rankingAB).map(r => ({...r, prom: round2(r.notas.reduce((a,b)=>a+b,0)/r.notas.length), nAl: r.notas.length}))
+    .filter(r => r.nAl >= 3)
+    .sort((a,b)=>a.prom-b.prom).slice(0, 10);
+  html += `<h3 style="margin-bottom:8px">🎯 10 Aprendizajes Base con menor logro</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#eef2f6;text-align:left">
+        <th style="padding:6px 8px">AB</th><th style="padding:6px 8px">Materia</th><th style="padding:6px 8px">Grado</th><th style="padding:6px 8px;text-align:center">Promedio</th><th style="padding:6px 8px;text-align:center">Alumnos</th>
+      </tr></thead><tbody>`;
+  if(!abArr.length){
+    html += `<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--text3);font-style:italic">Sin suficientes datos todavía para rankear AB (se necesitan ≥3 alumnos con nota por AB).</td></tr>`;
+  } else {
+    abArr.forEach(r => {
+      const color = r.prom >= 7 ? '#2e5e3f' : r.prom >= 6 ? '#c9b06a' : '#a34434';
+      html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px">${escH(r.nombre)}</td><td style="padding:6px 8px;color:var(--text2)">${escH(r.materia)}</td><td style="padding:6px 8px;color:var(--text2)">${escH(r.grado)}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:${color}">${r.prom.toFixed(2)}</td><td style="padding:6px 8px;text-align:center">${r.nAl}</td></tr>`;
+    });
+  }
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+}
+
+// ─── Vista 2: POR GRADO ─────────────────────────────────────────────────────
+function renderInformePorGrado(el){
+  const g = filtrosInforme.grado, per = filtrosInforme.periodo;
+  const alsG = alumnos.filter(a => a.grado === g).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const matsG = (window._materiasPorGrado||{})[g] || [];
+  if(!alsG.length){ el.innerHTML = `<div class="empty" style="padding:16px">Sin alumnos en ${escH(g)}.</div>`; return; }
+
+  // Promedio por materia (del grado)
+  const promsMat = {};
+  matsG.forEach(m => {
+    const notas = alsG.map(a => promedioAlumnoMatPer(a.id, m, g, per)).filter(v => v !== null);
+    promsMat[m] = notas.length ? round2(notas.reduce((a,b)=>a+b,0)/notas.length) : null;
+  });
+
+  let html = `<div style="padding:16px">
+    <h3 style="margin-bottom:4px">📚 ${escH(g)} Grado — ${escH(per)}</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px">${alsG.length} alumnos · ${matsG.length} materias</p>
+    <h4 style="margin-bottom:6px;font-size:13px">Promedio del grado por materia</h4>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px">
+      <thead><tr style="background:#eef2f6"><th style="padding:6px 8px;text-align:left">Materia</th><th style="padding:6px 8px;text-align:center">Prom. grado</th></tr></thead><tbody>`;
+  Object.entries(promsMat).sort((a,b)=>(a[1]??99)-(b[1]??99)).forEach(([m, p]) => {
+    const color = p === null ? '#999' : p >= 7 ? '#2e5e3f' : p >= 6 ? '#c9b06a' : '#a34434';
+    html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px">${escH(m)}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:${color}">${p !== null ? p.toFixed(2) : '—'}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  // Grilla de alumnos × materias
+  html += `<h4 style="margin-bottom:6px;font-size:13px">Alumnos del grado (promedio por materia)</h4>
+    <div style="overflow-x:auto">
+    <table style="border-collapse:collapse;font-size:11px;white-space:nowrap">
+      <thead><tr style="background:#eef2f6">
+        <th style="padding:4px 8px;text-align:left;position:sticky;left:0;background:#eef2f6;z-index:1">Alumno</th>
+        ${matsG.map(m => `<th style="padding:4px 8px;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis" title="${escH(m)}">${escH(m.substring(0,8))}${m.length>8?'…':''}</th>`).join('')}
+        <th style="padding:4px 8px;text-align:center;background:#dde6ee">Prom.</th>
+      </tr></thead><tbody>`;
+  alsG.forEach(a => {
+    const promsAl = matsG.map(m => promedioAlumnoMatPer(a.id, m, g, per));
+    const promGen = promsAl.filter(v => v !== null);
+    const promAl = promGen.length ? round2(promGen.reduce((x,y)=>x+y,0)/promGen.length) : null;
+    const reprobadas = promsAl.filter(v => v !== null && v < 7).length;
+    const colorAl = promAl === null ? '#999' : promAl >= 7 ? '#2e5e3f' : promAl >= 6 ? '#c9b06a' : '#a34434';
+    html += `<tr style="border-bottom:1px solid #f0f0f0${reprobadas>0?';background:#fff8f8':''}">
+      <td style="padding:4px 8px;position:sticky;left:0;background:${reprobadas>0?'#fff8f8':'white'};z-index:1">
+        ${escH(a.nombre)}${reprobadas>0?` <span style="font-size:9px;background:#f8d7da;color:#721c24;padding:1px 4px;border-radius:3px">⚠ ${reprobadas}</span>`:''}
+      </td>
+      ${promsAl.map(p => {
+        if(p === null) return `<td style="padding:4px 8px;text-align:center;color:#ccc">—</td>`;
+        const c = p >= 7 ? '#2e5e3f' : p >= 6 ? '#c9b06a' : '#a34434';
+        return `<td style="padding:4px 8px;text-align:center;color:${c};font-weight:600">${p.toFixed(1)}</td>`;
+      }).join('')}
+      <td style="padding:4px 8px;text-align:center;font-weight:700;color:${colorAl};background:#f5f8fa">${promAl !== null ? promAl.toFixed(2) : '—'}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  el.innerHTML = html;
+}
+
+// ─── Vista 3: POR MATERIA ───────────────────────────────────────────────────
+function renderInformePorMateria(el){
+  const g = filtrosInforme.grado, m = filtrosInforme.materia, per = filtrosInforme.periodo;
+  if(!m){ el.innerHTML = `<div class="empty" style="padding:16px">Elegí una materia.</div>`; return; }
+  const alsG = alumnos.filter(a => a.grado === g).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  // Promedio curso en la materia
+  const proms = alsG.map(a => ({ al: a, prom: promedioAlumnoMatPer(a.id, m, g, per) }));
+  const validos = proms.filter(p => p.prom !== null).map(p => p.prom);
+  const promCurso = validos.length ? round2(validos.reduce((a,b)=>a+b,0)/validos.length) : null;
+
+  // Desglose por AB (reusa lógica)
+  const evs = evalsDeMateria(m, g, per);
+  const porAB = {};
+  evs.forEach(e => {
+    const abIds = (e.aprendizaje_ids && e.aprendizaje_ids.length) ? e.aprendizaje_ids : ['__sin_ab__'];
+    alsG.forEach(al => {
+      const v = e.notas[al.id];
+      if(v === undefined || v === "" || v === null) return;
+      const n = Number(v);
+      if(isNaN(n)) return;
+      abIds.forEach(abId => {
+        if(!porAB[abId]){
+          let nombre = '(Sin AB asignado)';
+          if(abId !== '__sin_ab__'){
+            for(const arr of Object.values(aprendizajesPorMateria)){
+              const found = arr.find(x => x.id === abId);
+              if(found){ nombre = found.nombre; break; }
+            }
+          }
+          porAB[abId] = { nombre, notas: [], alumnosConNota: new Set() };
+        }
+        porAB[abId].notas.push(n);
+        porAB[abId].alumnosConNota.add(al.id);
+      });
+    });
+  });
+  const abArr = Object.values(porAB).map(ab => ({ ...ab, prom: round2(ab.notas.reduce((a,b)=>a+b,0)/ab.notas.length) }));
+
+  let html = `<div style="padding:16px">
+    <h3 style="margin-bottom:4px">📖 ${escH(m)} — ${escH(g)} · ${escH(per)}</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px">${alsG.length} alumnos · Promedio curso: <strong style="color:${promCurso===null?'#999':promCurso>=7?'#2e5e3f':promCurso>=6?'#c9b06a':'#a34434'}">${promCurso!==null?promCurso.toFixed(2):'—'}</strong></p>`;
+
+  html += `<h4 style="margin-bottom:6px;font-size:13px">Alumnos (ordenados por promedio ↑)</h4>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px">
+      <thead><tr style="background:#eef2f6"><th style="padding:6px 8px;text-align:left">Alumno</th><th style="padding:6px 8px;text-align:center">Promedio</th><th style="padding:6px 8px;text-align:center">Estado</th></tr></thead><tbody>`;
+  proms.sort((a,b)=>(a.prom??-1)-(b.prom??-1)).forEach(p => {
+    const color = p.prom === null ? '#999' : p.prom >= 7 ? '#2e5e3f' : p.prom >= 6 ? '#c9b06a' : '#a34434';
+    const estado = p.prom === null ? '<span style="color:#999">Sin notas</span>' : p.prom >= 7 ? '🟢 Aprobado' : p.prom >= 6 ? '🟡 En riesgo' : '🔴 Desaprobado';
+    html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px">${escH(p.al.nombre)}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:${color}">${p.prom !== null ? p.prom.toFixed(2) : '—'}</td><td style="padding:6px 8px;text-align:center;font-size:11px">${estado}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  if(abArr.length){
+    html += `<h4 style="margin-bottom:6px;font-size:13px">Desglose por AB (promedio del curso)</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#eef2f6"><th style="padding:6px 8px;text-align:left">AB</th><th style="padding:6px 8px;text-align:center">Prom. curso</th><th style="padding:6px 8px;text-align:center">Cobertura</th></tr></thead><tbody>`;
+    abArr.sort((a,b)=>a.prom-b.prom).forEach(ab => {
+      const color = ab.prom >= 7 ? '#2e5e3f' : ab.prom >= 6 ? '#c9b06a' : '#a34434';
+      html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px">${escH(ab.nombre)}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:${color}">${ab.prom.toFixed(2)}</td><td style="padding:6px 8px;text-align:center;color:var(--text3)">${ab.alumnosConNota.size}/${alsG.length}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+// ─── Vista 4: POR ALUMNO (la vieja, mantiene compat) ────────────────────────
+function renderInformePorAlumno(el){
+  const alId = filtrosInforme.alumnoId;
+  const al = alumnos.find(a => a.id === alId);
+  if(!al){ el.innerHTML = `<div class="empty" style="padding:16px"><div class="empty-icon">📊</div>Seleccioná un alumno.</div>`; return; }
+  // delega al render viejo (mantengo la lógica existente ↓↓↓)
+  renderInformeAlumnoLegacy(el, al);
+}
+// ─── Vista 5: POR AB ────────────────────────────────────────────────────────
+function renderInformePorAB(el){
+  const g = filtrosInforme.grado, m = filtrosInforme.materia, abId = filtrosInforme.abId, per = filtrosInforme.periodo;
+  if(!m || !abId){ el.innerHTML = `<div class="empty" style="padding:16px">Elegí materia y AB.</div>`; return; }
+  let abInfo = null;
+  for(const arr of Object.values(aprendizajesPorMateria)){
+    const f = arr.find(x => x.id === abId);
+    if(f){ abInfo = f; break; }
+  }
+  if(!abInfo){ el.innerHTML = `<div class="empty" style="padding:16px">AB no encontrado.</div>`; return; }
+  const alsG = alumnos.filter(a => a.grado === g).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const evs = evalsDeMateria(m, g, per).filter(e => (e.aprendizaje_ids||[]).includes(abId));
+
+  const rows = alsG.map(al => {
+    const notas = evs.map(e => {
+      const v = e.notas[al.id];
+      if(v === undefined || v === "" || v === null) return null;
+      return Number(v);
+    }).filter(v => v !== null && !isNaN(v));
+    const prom = notas.length ? round2(notas.reduce((a,b)=>a+b,0)/notas.length) : null;
+    return { al, notas, prom };
+  });
+  const aprobados = rows.filter(r => r.prom !== null && r.prom >= 7).length;
+  const desaprobados = rows.filter(r => r.prom !== null && r.prom < 7).length;
+  const sinNota = rows.filter(r => r.prom === null).length;
+
+  let html = `<div style="padding:16px">
+    <h3 style="margin-bottom:4px">🎯 ${escH(abInfo.nombre)}</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px">
+      ${abInfo.codigo ? `<code style="background:#f5f5f5;padding:1px 4px;border-radius:3px;margin-right:6px">${escH(abInfo.codigo)}</code>` : ''}
+      <strong>${escH(abInfo.eje)}</strong>${abInfo.sub_eje ? ' · ' + escH(abInfo.sub_eje) : ''} · ${escH(m)} · ${escH(g)} · ${escH(per)}
+    </p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="background:#d4edda;color:#155724;padding:8px 14px;border-radius:6px;font-size:13px"><strong>${aprobados}</strong> aprobados</div>
+      <div style="background:#f8d7da;color:#721c24;padding:8px 14px;border-radius:6px;font-size:13px"><strong>${desaprobados}</strong> desaprobados</div>
+      <div style="background:#f0f0f0;color:#555;padding:8px 14px;border-radius:6px;font-size:13px"><strong>${sinNota}</strong> sin nota</div>
+      <div style="background:#eef2f6;color:#1a4b7a;padding:8px 14px;border-radius:6px;font-size:13px"><strong>${evs.length}</strong> evaluaciones cubren este AB</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#eef2f6"><th style="padding:6px 8px;text-align:left">Alumno</th><th style="padding:6px 8px">Notas en este AB</th><th style="padding:6px 8px;text-align:center">Promedio</th><th style="padding:6px 8px;text-align:center">Estado</th></tr></thead><tbody>`;
+  rows.sort((a,b)=>(a.prom??-1)-(b.prom??-1)).forEach(r => {
+    const color = r.prom === null ? '#999' : r.prom >= 7 ? '#2e5e3f' : r.prom >= 6 ? '#c9b06a' : '#a34434';
+    const estado = r.prom === null ? '<span style="color:#999">—</span>' : r.prom >= 7 ? '🟢' : r.prom >= 6 ? '🟡' : '🔴';
+    html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px">${escH(r.al.nombre)}</td><td style="padding:6px 8px;color:var(--text2)">${r.notas.length ? r.notas.join(', ') : '<span style="color:#999">sin notas</span>'}</td><td style="padding:6px 8px;text-align:center;font-weight:700;color:${color}">${r.prom !== null ? r.prom.toFixed(2) : '—'}</td><td style="padding:6px 8px;text-align:center">${estado}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+}
+
+function renderInformeAlumnoLegacy(el, al){
   const g=al.grado;
-  const mats=Object.keys(aps);
+  // PASO 3.4e+: materias reales de ese grado (vienen de Supabase)
+  const mats = (window._materiasPorGrado || {})[g] || Object.keys(aps);
   const ll=llamados[al.id]||0;
 
   // Stats generales
@@ -1427,7 +2577,7 @@ function renderInforme(){
       const info=evsPer[p];
       if(!info.detalles.length)return;
       html+=`<div style="margin-top:6px"><strong>${p}</strong> — Promedio: <span style="color:${notaColor(info.prom)};font-weight:700">${formatN(info.prom)}</span></div>`;
-      html+=`<table style="margin:4px 0 8px;font-size:12px"><thead><tr><th style="padding:3px 8px">Fecha</th><th style="padding:3px 8px">Tipo</th><th style="padding:3px 8px">Contenido</th><th style="padding:3px 8px">AP</th><th class="center" style="padding:3px 8px">Nota</th></tr></thead><tbody>`;
+      html+=`<table style="margin:4px 0 8px;font-size:12px"><thead><tr><th style="padding:3px 8px">Fecha</th><th style="padding:3px 8px">Tipo</th><th style="padding:3px 8px">Contenido</th><th style="padding:3px 8px">AB</th><th class="center" style="padding:3px 8px">Nota</th></tr></thead><tbody>`;
       info.detalles.forEach(d=>{
         const esAus=d.nota==='Ausente';
         html+=`<tr><td style="padding:3px 8px;font-size:11px">${d.fecha}</td><td style="padding:3px 8px;font-size:11px">${d.subtipo}</td>
@@ -1483,24 +2633,44 @@ function renderInforme(){
 
   document.getElementById('informeContent').innerHTML=html;
 }
-function imprimirInforme(){
-  const content=document.getElementById('informeContent').innerHTML;
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe</title><style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#333}h3,h4{color:#4A6572}.profile-header{display:flex;align-items:center;gap:16px;margin-bottom:16px}.profile-avatar{width:50px;height:50px;border-radius:50%;background:#4A6572;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}.profile-name{font-size:18px;font-weight:700}.profile-sub{font-size:11px;color:#666}.stats-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stat-card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;min-width:100px}.stat-val{font-size:18px;font-weight:800}.stat-label{font-size:10px;color:#999}.informe-area{border-left:3px solid #1976D2;padding:6px 12px;margin-bottom:8px;background:#fafcff}.informe-area h4{font-size:12px;margin-bottom:4px}.nota-badge{border-radius:3px;padding:1px 4px;font-weight:700;font-size:10px}.nota-alta{background:#E8F5E9;color:#2E7D32}.nota-media{background:#FFF3E0;color:#E65100}.nota-baja{background:#FFEBEE;color:#C62828}.nota-excelente{background:#E3F2FD;color:#1565C0}table{border-collapse:collapse;width:100%}th,td{padding:3px 6px;border:1px solid #ddd;font-size:11px}th{background:#f5f5f5}@media print{body{padding:10px}}</style></head><body>${content}</body></html>`);
-  w.document.close();setTimeout(()=>w.print(),500);
+function imprimirInformeActual(){
+  const content = document.getElementById('informeContent').innerHTML;
+  const titulos = { institucional:'Panorama institucional', grado:`Grado ${filtrosInforme.grado}`, materia:`${filtrosInforme.materia} · ${filtrosInforme.grado}`, alumno:'Informe individual', ab:`AB · ${filtrosInforme.materia||''} · ${filtrosInforme.grado}` };
+  const t = titulos[vistaInforme] || 'Informe';
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t}</title><style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#333}h3,h4{color:#4A6572}.profile-header{display:flex;align-items:center;gap:16px;margin-bottom:16px}.profile-avatar{width:50px;height:50px;border-radius:50%;background:#4A6572;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}.profile-name{font-size:18px;font-weight:700}.profile-sub{font-size:11px;color:#666}.stats-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stat-card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;min-width:100px}.stat-val{font-size:18px;font-weight:800}.stat-label{font-size:10px;color:#999}table{border-collapse:collapse;width:100%}th,td{padding:3px 6px;border:1px solid #ddd;font-size:11px}th{background:#f5f5f5}@media print{body{padding:10px} @page{size:A4 landscape;margin:1cm}}</style></head><body><h1 style="font-size:14px;color:#4A6572">${t} — Colegio FASTA Juan Pablo II</h1><p style="font-size:10px;color:#999">Generado: ${new Date().toLocaleString('es-AR')}</p>${content}</body></html>`);
+  w.document.close(); setTimeout(()=>w.print(),500);
 }
-function exportarInformeExcel(){
-  const alId=parseInt(document.getElementById('infAlumno').value);
-  const al=alumnos.find(a=>a.id===alId);if(!al)return;
+
+function exportarInformeActual(){
+  if(vistaInforme === 'alumno'){ exportarInformeAlumnoLegacy(); return; }
+  // Para las otras vistas: capturar la primera <table> del contenido y pasarla a Excel
+  const el = document.getElementById('informeContent');
+  const tablas = el.querySelectorAll('table');
+  if(!tablas.length){ alert('No hay datos tabulares para exportar en esta vista.'); return; }
+  const wb = XLSX.utils.book_new();
+  tablas.forEach((tabla, i) => {
+    const ws = XLSX.utils.table_to_sheet(tabla);
+    XLSX.utils.book_append_sheet(wb, ws, `Hoja ${i+1}`);
+  });
+  const nombres = { institucional:'Institucional', grado:`Grado_${filtrosInforme.grado}`, materia:`${filtrosInforme.materia||''}_${filtrosInforme.grado}`, ab:`AB_${filtrosInforme.grado}` };
+  const n = (nombres[vistaInforme] || 'Informe').replace(/[^a-zA-Z0-9_]/g,'_');
+  descargarExcel(wb, `Informe_${n}_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function exportarInformeAlumnoLegacy(){
+  const alId = filtrosInforme.alumnoId;
+  const al = alumnos.find(a => a.id === alId);
+  if(!al){ alert('Elegí un alumno primero.'); return; }
   const wb=XLSX.utils.book_new();
-  const mats=Object.keys(aps);
-  const rows=[["INFORME DE RENDIMIENTO"],["Alumno:",al.nombre],["Grado:",al.grado],["Año:","2026"],[""]];
+  const mats = (window._materiasPorGrado || {})[al.grado] || Object.keys(aps);
+  const rows=[["INFORME DE RENDIMIENTO"],["Alumno:",al.nombre],["Grado:",al.grado],["Año:",new Date().getFullYear()],[""]];
   mats.forEach(mat=>{
     rows.push([mat]);
     PERIODOS.forEach(p=>{
       const evs=evalsDeMateria(mat,al.grado,p);
       if(!evs.length)return;
-      rows.push(["",p,"Fecha","Tipo","Contenido","AP","Nota"]);
+      rows.push(["",p,"Fecha","Tipo","Contenido","AB","Nota"]);
       evs.forEach(e=>{
         const nota=e.notas[al.id];const aus=(e.ausentes||[]).includes(al.id);
         rows.push(["","",e.fecha,e.subtipo,e.descripcion||"",e.ap||"",aus?"AUS":(nota??"")]);
@@ -1519,34 +2689,188 @@ function exportarInformeExcel(){
 // ════════════════════════════════════════════════════════════════════════════
 // AUDITORÍA
 // ════════════════════════════════════════════════════════════════════════════
-function renderAuditoria(){
-  const el=document.getElementById('auditoriaLista');
-  if(!registroCambios.length){el.innerHTML=`<div class="empty" style="padding:16px">No hay cambios registrados. Cada vez que se edite, borre o modifique un registro, quedará asentado acá con fecha, hora, acción y motivo.</div>`;return;}
-  const recientes=registroCambios.slice().reverse();
-  let html='<table><thead><tr><th style="width:90px">Fecha</th><th style="width:70px">Hora</th><th>Acción realizada</th><th>Motivo del cambio</th></tr></thead><tbody>';
-  recientes.forEach(r=>{
-    html+=`<tr><td style="font-size:12px">${r.fecha}</td><td style="font-size:12px;color:var(--text2)">${r.hora}</td>
-      <td style="font-size:12px"><strong>${escH(r.accion)}</strong></td>
-      <td style="font-size:12px;color:var(--text2)">${escH(r.motivo)}</td></tr>`;
+// ════════════════════════════════════════════════════════════════════════════
+// AUDITORÍA — PASO 3.4e (Supabase, inmutable, unificada con Convivencia)
+// ════════════════════════════════════════════════════════════════════════════
+let auditoriaCache = [];       // registros ya traídos (acumulan al "cargar más")
+let auditoriaOffset = 0;        // próximo offset para paginación
+let auditoriaHayMas = true;     // si hay más registros por traer
+const AUDITORIA_PAGE = 100;
+
+async function renderAuditoria(){
+  const el = document.getElementById('auditoriaLista');
+  if(!sb){ el.innerHTML = `<div class="empty" style="padding:16px">⚠ Sin conexión a Supabase.</div>`; return; }
+
+  // Llenar dropdown de años si está vacío
+  const selAnio = document.getElementById('auditoriaAnio');
+  if(selAnio && !selAnio.options.length){
+    const anioActual = new Date().getFullYear();
+    let opts = `<option value="todos">Todos</option>`;
+    for(let a = anioActual; a >= anioActual - 5; a--){
+      opts += `<option value="${a}"${a===anioActual?' selected':''}>${a}</option>`;
+    }
+    selAnio.innerHTML = opts;
+  }
+
+  // Reset: cada cambio de filtro vuelve a arrancar
+  auditoriaCache = [];
+  auditoriaOffset = 0;
+  auditoriaHayMas = true;
+  await cargarMasAuditoria();
+}
+
+async function cargarMasAuditoria(){
+  const el = document.getElementById('auditoriaLista');
+  const infoEl = document.getElementById('auditoriaInfo');
+  const btnMas = document.getElementById('btnCargarMasAudit');
+  if(!sb) return;
+
+  const anio = document.getElementById('auditoriaAnio')?.value || 'todos';
+  const app = document.getElementById('auditoriaApp')?.value || 'todo';
+  const buscar = (document.getElementById('auditoriaBuscar')?.value || '').toLowerCase().trim();
+
+  try {
+    let q = sb.from('auditoria').select('*', { count: 'exact' })
+      .order('fecha', { ascending: false })
+      .range(auditoriaOffset, auditoriaOffset + AUDITORIA_PAGE - 1);
+    if(anio !== 'todos'){
+      q = q.gte('fecha', `${anio}-01-01`).lt('fecha', `${parseInt(anio)+1}-01-01`);
+    }
+    if(app !== 'todo') q = q.eq('app', app);
+
+    const { data, error, count } = await q;
+    if(error){ el.innerHTML = `<div class="empty" style="padding:16px;color:var(--red)">❌ ${escH(error.message)}</div>`; return; }
+
+    // Resolver usuarios (nombre a partir del uuid)
+    const docMap = {};
+    docentes.forEach(d => { docMap[d.id] = d; });
+
+    let nuevos = (data || []).map(r => ({
+      ...r,
+      usuario_nombre: r.usuario_id ? (docMap[r.usuario_id]?.nombre || docMap[r.usuario_id]?.email || r.usuario_id.slice(0,8)+'…') : '(sin usuario)'
+    }));
+    // Filtro por texto (client-side)
+    if(buscar){
+      nuevos = nuevos.filter(r =>
+        (r.tabla||'').toLowerCase().includes(buscar) ||
+        (r.operacion||'').toLowerCase().includes(buscar) ||
+        (r.motivo||'').toLowerCase().includes(buscar) ||
+        (r.usuario_nombre||'').toLowerCase().includes(buscar)
+      );
+    }
+
+    auditoriaCache = auditoriaCache.concat(nuevos);
+    auditoriaOffset += (data || []).length;
+    auditoriaHayMas = (data || []).length === AUDITORIA_PAGE;
+
+    if(infoEl) infoEl.textContent = count !== null
+      ? `Mostrando ${auditoriaCache.length} de ${count} total${count !== 1 ? 'es' : ''}`
+      : `Mostrando ${auditoriaCache.length}`;
+    if(btnMas) btnMas.style.display = auditoriaHayMas ? '' : 'none';
+
+    renderAuditoriaTabla();
+  } catch(e){
+    el.innerHTML = `<div class="empty" style="padding:16px;color:var(--red)">❌ ${escH(e.message)}</div>`;
+  }
+}
+
+function renderAuditoriaTabla(){
+  const el = document.getElementById('auditoriaLista');
+  if(!auditoriaCache.length){
+    el.innerHTML = `<div class="empty" style="padding:16px">No hay registros que coincidan con los filtros.</div>`;
+    return;
+  }
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#eef2f6">
+      <th style="padding:6px 8px;text-align:left;width:140px">Fecha / Hora</th>
+      <th style="padding:6px 8px;text-align:left;width:70px">App</th>
+      <th style="padding:6px 8px;text-align:left;width:120px">Tabla</th>
+      <th style="padding:6px 8px;text-align:left;width:100px">Operación</th>
+      <th style="padding:6px 8px;text-align:left">Usuario</th>
+      <th style="padding:6px 8px;text-align:left">Motivo</th>
+    </tr></thead><tbody>`;
+  auditoriaCache.forEach(r => {
+    const fh = r.fecha ? new Date(r.fecha).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : '';
+    const appBadge = r.app === 'gei'
+      ? '<span style="background:#cfe2ff;color:#084298;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">GEI</span>'
+      : r.app === 'convivencia'
+      ? '<span style="background:#d1e7dd;color:#0a3622;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">CONV</span>'
+      : `<span style="color:var(--text3)">${escH(r.app||'—')}</span>`;
+    const opColor = r.operacion === 'DELETE' ? '#a34434' : r.operacion === 'INSERT' ? '#2e5e3f' : '#c9b06a';
+    html += `<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:6px 8px;font-size:11px">${fh}</td>
+      <td style="padding:6px 8px">${appBadge}</td>
+      <td style="padding:6px 8px;color:var(--text2)">${escH(r.tabla||'')}</td>
+      <td style="padding:6px 8px;font-weight:600;color:${opColor}">${escH(r.operacion||'')}</td>
+      <td style="padding:6px 8px">${escH(r.usuario_nombre||'')}</td>
+      <td style="padding:6px 8px;color:var(--text2)">${escH(r.motivo||'')}</td>
+    </tr>`;
   });
-  html+='</tbody></table>';
-  el.innerHTML=html;
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
+
 function exportarAuditoria(){
-  if(!registroCambios.length){alert('No hay registros para exportar.');return;}
-  const wb=XLSX.utils.book_new();
-  const rows=[["Fecha","Hora","Acción","Motivo"],...registroCambios.map(r=>[r.fecha,r.hora,r.accion,r.motivo])];
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[{wch:12},{wch:10},{wch:40},{wch:40}];
-  XLSX.utils.book_append_sheet(wb,ws,"Auditoría");
-  descargarExcel(wb,"Registro_Auditoria_GEI.xlsx");
+  if(!auditoriaCache.length){ alert('No hay registros para exportar.'); return; }
+  const wb = XLSX.utils.book_new();
+  const rows = [["Fecha", "Hora", "App", "Tabla", "Operación", "Usuario", "Motivo", "Registro ID"]];
+  auditoriaCache.forEach(r => {
+    const d = r.fecha ? new Date(r.fecha) : null;
+    rows.push([
+      d ? d.toLocaleDateString('es-AR') : '',
+      d ? d.toLocaleTimeString('es-AR') : '',
+      r.app || '',
+      r.tabla || '',
+      r.operacion || '',
+      r.usuario_nombre || '',
+      r.motivo || '',
+      r.registro_id || ''
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{wch:12},{wch:10},{wch:12},{wch:20},{wch:12},{wch:30},{wch:40},{wch:38}];
+  XLSX.utils.book_append_sheet(wb, ws, "Auditoría");
+  const anio = document.getElementById('auditoriaAnio')?.value || 'todos';
+  descargarExcel(wb, `Auditoria_${anio}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+function exportarAuditoriaPDF(){
+  if(!auditoriaCache.length){ alert('No hay registros para exportar.'); return; }
+  const anio = document.getElementById('auditoriaAnio')?.value || 'todos';
+  const app = document.getElementById('auditoriaApp')?.value || 'todo';
+  let filas = '';
+  auditoriaCache.forEach(r => {
+    const d = r.fecha ? new Date(r.fecha).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : '';
+    filas += `<tr>
+      <td>${d}</td><td>${escH(r.app||'')}</td><td>${escH(r.tabla||'')}</td>
+      <td>${escH(r.operacion||'')}</td><td>${escH(r.usuario_nombre||'')}</td>
+      <td>${escH(r.motivo||'')}</td>
+    </tr>`;
+  });
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Auditoría ${anio}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:20px;font-size:11px}
+      h1{font-size:16px;color:#4A6572;margin-bottom:6px}
+      .meta{font-size:10px;color:#666;margin-bottom:14px}
+      table{border-collapse:collapse;width:100%}
+      th,td{padding:5px 8px;border:1px solid #ddd;font-size:10px;text-align:left;vertical-align:top}
+      th{background:#4A6572;color:#fff}
+      tr:nth-child(even){background:#f9fafb}
+      @media print{ body{padding:10px} @page{size:A4 landscape;margin:1cm} }
+    </style></head><body>
+    <h1>📋 Registro de Auditoría — Colegio FASTA Juan Pablo II</h1>
+    <div class="meta">Año: ${anio} · App: ${app} · Generado: ${new Date().toLocaleString('es-AR')} · Total registros: ${auditoriaCache.length}</div>
+    <table><thead><tr><th>Fecha / Hora</th><th>App</th><th>Tabla</th><th>Operación</th><th>Usuario</th><th>Motivo</th></tr></thead>
+    <tbody>${filas}</tbody></table>
+    <p style="font-size:9px;color:#999;margin-top:14px">Documento generado automáticamente. Los registros son inmutables en la base de datos.</p>
+    </body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
 function imprimirAuditoria(){
-  if(!registroCambios.length){alert('No hay registros.');return;}
-  const content=document.getElementById('auditoriaLista').innerHTML;
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Auditoría</title><style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px}h1{font-size:16px;color:#4A6572}table{border-collapse:collapse;width:100%}th,td{padding:6px 10px;border:1px solid #ddd;font-size:11px}th{background:#4A6572;color:#fff}@media print{body{padding:10px}}</style></head><body><h1>📋 Registro de Auditoría — P276 FASTA JUAN PABLO II</h1><p>Generado: ${new Date().toLocaleString('es-AR')}</p>${content}</body></html>`);
-  w.document.close();setTimeout(()=>w.print(),500);
+  exportarAuditoriaPDF();  // mismo flujo, el usuario elige "Guardar como PDF" o imprimir en papel
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1555,13 +2879,43 @@ function imprimirAuditoria(){
 
 
 
-function accionProtegida(callback, descripcionAccion){
-  // Versión simplificada: pide motivo y ejecuta.
-  // La seguridad real se delega a los roles de Supabase (RLS policies).
+function accionProtegida(callback, descripcionAccion, opcionesAudit){
+  // Pide motivo y ejecuta. Guarda la acción en public.auditoria (Supabase, inmutable).
+  // opcionesAudit opcional: { tabla, operacion, registro_id, datos_anterior, datos_nuevo }
   pedirMotivo(descripcionAccion || 'Acción sin descripción', (motivo)=>{
+    // Registro local (compat con registroCambios viejo)
     registrarCambio(descripcionAccion || 'Acción', motivo);
+    // Registro remoto en Supabase (no bloquea el callback si falla)
+    const op = opcionesAudit || {};
+    registrarAuditoria({
+      tabla: op.tabla || '_app_',
+      operacion: op.operacion || 'ACTION',
+      registro_id: op.registro_id || descripcionAccion || 'acción',
+      motivo: motivo,
+      datos_anterior: op.datos_anterior,
+      datos_nuevo: op.datos_nuevo
+    }).catch(e => console.warn('⚠ No se pudo registrar en auditoria Supabase:', e.message));
     callback();
   });
+}
+
+// Registra una acción en public.auditoria. No bloquea si falla.
+async function registrarAuditoria({tabla, operacion, registro_id, motivo, datos_anterior, datos_nuevo}){
+  if(!sb || !usuarioLog) return;
+  try {
+    const payload = {
+      tabla: tabla || '_app_',
+      operacion: operacion || 'ACTION',
+      registro_id: registro_id || '',
+      usuario_id: usuarioLog.id,
+      app: 'gei',
+      motivo: motivo || '',
+      datos_anterior: datos_anterior || null,
+      datos_nuevo: datos_nuevo || null
+    };
+    const { error } = await sb.from('auditoria').insert(payload);
+    if(error) console.warn('⚠ Error insertando auditoria:', error.message);
+  } catch(e){ console.warn('⚠ Error registrarAuditoria:', e.message); }
 }
 
 function pedirMotivo(descripcionAccion, callback){
@@ -1588,6 +2942,8 @@ function confirmarMotivo(){
   const motivo=document.getElementById('inputMotivoSolo').value.trim();
   if(!motivo){document.getElementById('motivoError').textContent='⚠️ Debés escribir un motivo.';document.getElementById('motivoError').style.display='block';return;}
   document.getElementById('modalMotivo').remove();
+  // PASO 3.4d — guardar el motivo para que persistirNota / registrarCambioNota lo use
+  window._ultimoMotivo = motivo;
   if(window._motivoCallback){window._motivoCallback(motivo);window._motivoCallback=null;}
 }
 
@@ -1717,23 +3073,255 @@ function renderHistorialPromociones(){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// CONFIG / APS
+// CONFIG / APRENDIZAJES BASE (PASO 3.4e — contra Supabase)
 // ════════════════════════════════════════════════════════════════════════════
+// Estado del selector (materia_id actualmente mostrado en el panel derecho)
+let materiaIdSeleccionadaConfig = null;
+
 function renderAreaList(){
-  document.getElementById('areaListWrap').innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text3);padding:4px 8px;margin-bottom:4px">MATERIAS</div>`+
-    Object.keys(apsLocal).map(a=>`<div class="area-item${a===areaEdActual?' active':''}" onclick="areaEdActual='${a.replace(/'/g,"\\'")}';renderAreaList();renderAPPanel();">
-      <span>${escH(a)}</span><span style="font-size:10px;color:var(--text3);background:#f5f5f5;padding:1px 5px;border-radius:4px">${(apsLocal[a]||[]).length}</span></div>`).join('');
+  // Lista de materias de Supabase, agrupadas por grado y ordenadas
+  const wrap = document.getElementById('areaListWrap');
+  if(!wrap) return;
+  const materiasPorGrado = window._materiasPorGrado || {};
+  const grados = Object.keys(materiasPorGrado).sort();
+  let html = `<div style="font-size:11px;font-weight:600;color:var(--text3);padding:4px 8px;margin-bottom:4px">MATERIAS DE PRIMARIA</div>`;
+  grados.forEach(g => {
+    html += `<div style="font-size:10px;font-weight:700;color:var(--text3);padding:6px 8px 2px;background:#f9fafb;margin-top:4px">${escH(g)}</div>`;
+    const nombres = (materiasPorGrado[g]||[]).slice().sort();
+    nombres.forEach(nombre => {
+      const mid = materiaIdDe(nombre, g);
+      if(!mid) return;
+      const abCount = (aprendizajesPorMateria[mid]||[]).length;
+      const pend = (aprendizajesPorMateria[mid]||[]).filter(a => a.estado === 'pendiente').length;
+      const activa = mid === materiaIdSeleccionadaConfig;
+      html += `<div class="area-item${activa?' active':''}" onclick="seleccionarMateriaConfig('${mid}')" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;cursor:pointer;border-radius:4px;${activa?'background:#e0ecf7;font-weight:600':''}">
+        <span style="font-size:12px">${escH(nombre)}</span>
+        <span style="display:flex;gap:4px">
+          ${pend>0?`<span title="${pend} pendientes" style="font-size:9px;background:#fff3cd;color:#856404;padding:1px 5px;border-radius:4px;font-weight:700">${pend}p</span>`:''}
+          <span style="font-size:10px;color:var(--text3);background:#f0f0f0;padding:1px 5px;border-radius:4px">${abCount}</span>
+        </span>
+      </div>`;
+    });
+  });
+  wrap.innerHTML = html;
 }
+
+function seleccionarMateriaConfig(mid){
+  materiaIdSeleccionadaConfig = mid;
+  renderAreaList();
+  renderAPPanel();
+}
+
 function renderAPPanel(){
-  const a=areaEdActual,lista=apsLocal[a]||[];
-  let html=`<div style="display:flex;justify-content:space-between;margin-bottom:12px"><strong>${escH(a)}</strong><button class="btn btn-red btn-xs" onclick="if(confirm('¿Eliminar?')){delete apsLocal['${a.replace(/'/g,"\\'")}'];areaEdActual=Object.keys(apsLocal)[0]||'';renderAreaList();renderAPPanel();}">Eliminar</button></div>`;
-  if(!lista.length)html+=`<p style="color:var(--text3);font-size:12px;font-style:italic">Sin aprendizajes prioritarios.</p>`;
-  lista.forEach((ap,i)=>{html+=`<div class="ap-item"><span>${escH(ap)}</span><button style="background:none;border:none;cursor:pointer;color:var(--red)" onclick="apsLocal['${a.replace(/'/g,"\\'")}'].splice(${i},1);renderAreaList();renderAPPanel();">✕</button></div>`;});
-  html+=`<div class="row" style="margin-top:8px"><input class="inp" id="nuevoAP" placeholder="Nuevo AP..." style="flex:1" onkeydown="if(event.key==='Enter'){apsLocal['${a.replace(/'/g,"\\'")}'].push(this.value.trim());this.value='';renderAreaList();renderAPPanel();}"><button class="btn btn-green btn-xs" onclick="const v=document.getElementById('nuevoAP').value.trim();if(v){apsLocal['${a.replace(/'/g,"\\'")}'].push(v);document.getElementById('nuevoAP').value='';renderAreaList();renderAPPanel();}">+ Agregar</button></div>`;
-  document.getElementById('apPanel').innerHTML=html;
+  const panel = document.getElementById('apPanel');
+  if(!panel) return;
+  const mid = materiaIdSeleccionadaConfig;
+  if(!mid){
+    panel.innerHTML = `<p style="color:var(--text3);font-size:12px;font-style:italic">Seleccioná una materia a la izquierda para ver sus Aprendizajes Base.</p>`;
+    return;
+  }
+  // Nombre y grado de la materia
+  let nombreMat = '', gradoMat = '';
+  for(const [clave, id] of Object.entries(materiaIdPorNombreGrado)){
+    if(id === mid){ const [n, g] = clave.split('::'); nombreMat = n; gradoMat = g; break; }
+  }
+  const lista = (aprendizajesPorMateria[mid]||[]).slice().sort((a,b)=>{
+    if(a.eje !== b.eje) return a.eje.localeCompare(b.eje);
+    return (a.orden||0) - (b.orden||0);
+  });
+  const puedoAprobar = esAdminDirCoord();
+  const puedoCrear = !soyPsicopedagoga();  // psicopedagoga nunca crea
+  const ejesSug = ejesSugeridosPorMateria[mid] || [];
+
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div><strong>${escH(nombreMat)}</strong> <span style="color:var(--text3);font-size:12px">· ${escH(gradoMat)}</span></div>
+    <div style="font-size:11px;color:var(--text3)">${lista.length} AB</div>
+  </div>`;
+
+  if(!lista.length){
+    html += `<p style="color:var(--text3);font-size:12px;font-style:italic;margin-bottom:12px">Sin AB cargados todavía.</p>`;
+  } else {
+    // Agrupar por eje para mostrar ordenado
+    const porEje = {};
+    lista.forEach(ab => {
+      const k = ab.eje + (ab.sub_eje ? ' · ' + ab.sub_eje : '');
+      if(!porEje[k]) porEje[k] = [];
+      porEje[k].push(ab);
+    });
+    Object.keys(porEje).forEach(eje => {
+      html += `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:10px 0 4px;padding:3px 6px;background:#f5f8fa;border-left:3px solid #4a7ba3">${escH(eje)}</div>`;
+      porEje[eje].forEach(ab => {
+        const esDGE = ab.origen === 'dge';
+        const badgeEstado = ab.estado === 'aprobado' ? '<span style="font-size:9px;background:#d4edda;color:#155724;padding:1px 5px;border-radius:4px;font-weight:700">✓ APROBADO</span>'
+          : ab.estado === 'pendiente' ? '<span style="font-size:9px;background:#fff3cd;color:#856404;padding:1px 5px;border-radius:4px;font-weight:700">⏳ PENDIENTE</span>'
+          : '<span style="font-size:9px;background:#f8d7da;color:#721c24;padding:1px 5px;border-radius:4px;font-weight:700">✕ RECHAZADO</span>';
+        const badgeOrigen = esDGE ? '<span title="Oficial DGE" style="font-size:9px;background:#cfe2ff;color:#084298;padding:1px 5px;border-radius:4px;font-weight:700">DGE</span>'
+          : ab.origen === 'institucional' ? '<span title="Institucional" style="font-size:9px;background:#e2d9f3;color:#432874;padding:1px 5px;border-radius:4px;font-weight:700">INST</span>'
+          : '<span title="Carga docente" style="font-size:9px;background:#f0f0f0;color:#555;padding:1px 5px;border-radius:4px;font-weight:700">DOC</span>';
+        const codigo = ab.codigo ? `<code style="font-size:10px;background:#f5f5f5;padding:1px 4px;border-radius:3px;margin-right:4px">${escH(ab.codigo)}</code>` : '';
+        let acciones = '';
+        if(!esDGE){
+          if(puedoAprobar && ab.estado === 'pendiente'){
+            acciones += `<button class="btn btn-green btn-xs" onclick="aprobarAB('${ab.id}')" title="Aprobar">✓</button>`;
+            acciones += `<button class="btn btn-red btn-xs" onclick="rechazarAB('${ab.id}')" title="Rechazar" style="margin-left:4px">✕</button>`;
+          }
+          if(puedoAprobar){
+            acciones += `<button class="btn btn-sec btn-xs" onclick="eliminarAB('${ab.id}')" title="Eliminar" style="margin-left:4px">🗑</button>`;
+          }
+        }
+        html += `<div class="ap-item" style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px;border-bottom:1px solid #f0f0f0;gap:8px">
+          <div style="flex:1">
+            <div>${codigo}${escH(ab.nombre)}</div>
+            <div style="margin-top:3px;display:flex;gap:4px">${badgeOrigen}${badgeEstado}</div>
+          </div>
+          <div style="display:flex;align-items:center">${acciones}</div>
+        </div>`;
+      });
+    });
+  }
+
+  // Formulario de nuevo AB (si tiene permiso)
+  if(puedoCrear){
+    const ejesExistentes = [...new Set(lista.map(a => a.eje))].sort();
+    const ejesSugNoUsados = ejesSug.map(e => e.eje).filter(e => !ejesExistentes.includes(e));
+    const todosLosEjes = [...new Set([...ejesExistentes, ...ejesSugNoUsados])];
+    const optionsEjes = todosLosEjes.map(e => `<option value="${escH(e)}">${escH(e)}</option>`).join('');
+    const estadoNuevo = puedoAprobar ? 'aprobado' : 'pendiente';
+    const avisoEstado = puedoAprobar
+      ? '<span style="color:#155724;font-size:11px">✓ Entra como aprobado</span>'
+      : '<span style="color:#856404;font-size:11px">⏳ Entra como pendiente, requiere aprobación de coordinación/dirección</span>';
+    html += `<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px;border:1px dashed #ccc">
+      <strong style="font-size:12px">+ Agregar Aprendizaje Base</strong>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:2px">Eje</label>
+          <select class="sel" id="nuevoAB_eje" style="width:100%" onchange="toggleEjeNuevo(this)">
+            <option value="">— Elegí un eje —</option>
+            ${optionsEjes}
+            <option value="__nuevo__">+ Nuevo eje (escribir)</option>
+          </select>
+          <input class="inp" id="nuevoAB_ejeTexto" placeholder="Nombre del nuevo eje" style="width:100%;margin-top:4px;display:none">
+        </div>
+        <div><label style="font-size:11px;font-weight:600;display:block;margin-bottom:2px">Sub-eje (opcional)</label>
+          <input class="inp" id="nuevoAB_subEje" placeholder="Ej: Número, Operaciones, Medida..." style="width:100%">
+        </div>
+      </div>
+      <div style="margin-top:8px"><label style="font-size:11px;font-weight:600;display:block;margin-bottom:2px">Nombre del AB</label>
+        <input class="inp" id="nuevoAB_nombre" placeholder="Ej: Comprensión de textos narrativos breves" style="width:100%">
+      </div>
+      <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+        ${avisoEstado}
+        <button class="btn btn-green btn-sm" onclick="agregarAB('${mid}','${estadoNuevo}')">Agregar AB</button>
+      </div>
+    </div>`;
+  }
+  panel.innerHTML = html;
 }
-function agregarArea(){const v=document.getElementById('nuevaArea').value.trim();if(!v||apsLocal[v])return;apsLocal[v]=[];areaEdActual=v;document.getElementById('nuevaArea').value='';renderAreaList();renderAPPanel();}
-function guardarAPs(){aps=JSON.parse(JSON.stringify(apsLocal));sv('aps',aps);const b=document.getElementById('btnGuardarAPs');b.textContent='✅ Guardado';setTimeout(()=>b.textContent='💾 Guardar cambios',2000);}
+
+async function agregarAB(materiaId, estadoInicial){
+  const selEje = document.getElementById('nuevoAB_eje').value;
+  const ejeTexto = document.getElementById('nuevoAB_ejeTexto').value.trim();
+  const eje = selEje === '__nuevo__' ? ejeTexto : selEje;
+  const subEje = document.getElementById('nuevoAB_subEje').value.trim();
+  const nombre = document.getElementById('nuevoAB_nombre').value.trim();
+  if(!eje){ alert('Elegí o escribí un eje'); return; }
+  if(!nombre){ alert('Escribí el nombre del AB'); return; }
+  if(!sb){ alert('Sin conexión a Supabase'); return; }
+  try {
+    const payload = {
+      materia_id: materiaId,
+      eje: eje,
+      sub_eje: subEje || null,
+      nombre: nombre,
+      origen: 'docente',
+      creado_por: usuarioLog ? usuarioLog.id : null,
+      estado: estadoInicial
+    };
+    if(estadoInicial === 'aprobado'){
+      payload.revisado_por = usuarioLog ? usuarioLog.id : null;
+      payload.revisado_at = new Date().toISOString();
+    }
+    const { data, error } = await sb.from('aprendizajes').insert(payload).select().single();
+    if(error){ alert('❌ No se pudo agregar: ' + error.message); return; }
+    // Agregar a cache local
+    if(!aprendizajesPorMateria[materiaId]) aprendizajesPorMateria[materiaId] = [];
+    aprendizajesPorMateria[materiaId].push(data);
+    renderAreaList();
+    renderAPPanel();
+  } catch(e){ alert('❌ Error: ' + e.message); }
+}
+
+async function aprobarAB(abId){
+  if(!esAdminDirCoord()){ alert('Solo admin/dirección/coordinación pueden aprobar.'); return; }
+  if(!sb){ alert('Sin conexión'); return; }
+  try {
+    const { data, error } = await sb.from('aprendizajes').update({
+      estado: 'aprobado',
+      revisado_por: usuarioLog ? usuarioLog.id : null,
+      revisado_at: new Date().toISOString(),
+      motivo_rechazo: null
+    }).eq('id', abId).select().single();
+    if(error){ alert('❌ ' + error.message); return; }
+    // Actualizar cache local
+    for(const arr of Object.values(aprendizajesPorMateria)){
+      const idx = arr.findIndex(a => a.id === abId);
+      if(idx >= 0){ arr[idx] = data; break; }
+    }
+    renderAreaList();
+    renderAPPanel();
+  } catch(e){ alert('❌ ' + e.message); }
+}
+
+async function rechazarAB(abId){
+  if(!esAdminDirCoord()){ alert('Solo admin/dirección/coordinación pueden rechazar.'); return; }
+  const motivo = prompt('Motivo del rechazo (opcional):', '');
+  if(motivo === null) return;  // cancelado
+  if(!sb){ alert('Sin conexión'); return; }
+  try {
+    const { data, error } = await sb.from('aprendizajes').update({
+      estado: 'rechazado',
+      revisado_por: usuarioLog ? usuarioLog.id : null,
+      revisado_at: new Date().toISOString(),
+      motivo_rechazo: motivo || null
+    }).eq('id', abId).select().single();
+    if(error){ alert('❌ ' + error.message); return; }
+    for(const arr of Object.values(aprendizajesPorMateria)){
+      const idx = arr.findIndex(a => a.id === abId);
+      if(idx >= 0){ arr[idx] = data; break; }
+    }
+    renderAreaList();
+    renderAPPanel();
+  } catch(e){ alert('❌ ' + e.message); }
+}
+
+async function eliminarAB(abId){
+  if(!esAdminDirCoord()){ alert('Solo admin/dirección/coordinación pueden eliminar.'); return; }
+  if(!confirm('¿Eliminar este AB? Esta acción no se puede deshacer. Si hay evaluaciones ligadas, la eliminación será rechazada por la base.')) return;
+  if(!sb){ alert('Sin conexión'); return; }
+  try {
+    const { error } = await sb.from('aprendizajes').delete().eq('id', abId);
+    if(error){ alert('❌ ' + error.message + '\n\n(Posible causa: hay evaluaciones ligadas a este AB.)'); return; }
+    // Sacar de cache local
+    for(const arr of Object.values(aprendizajesPorMateria)){
+      const idx = arr.findIndex(a => a.id === abId);
+      if(idx >= 0){ arr.splice(idx, 1); break; }
+    }
+    renderAreaList();
+    renderAPPanel();
+  } catch(e){ alert('❌ ' + e.message); }
+}
+
+// Mostrar/ocultar el input de "nuevo eje" según selección del dropdown
+function toggleEjeNuevo(selectEl){
+  const ti = document.getElementById('nuevoAB_ejeTexto');
+  if(!ti) return;
+  const esNuevo = selectEl.value === '__nuevo__';
+  ti.style.display = esNuevo ? '' : 'none';
+  if(esNuevo) ti.focus();
+}
+
+// Stubs para no romper referencias viejas (ya no se usan pero el HTML viejo las podría llamar)
+function agregarArea(){ /* obsoleto: las materias vienen de Supabase */ }
+function guardarAPs(){ /* obsoleto: los AB se guardan al INSERT individual */ }
 
 // ════════════════════════════════════════════════════════════════════════════
 // IMPORTAR EXCEL
@@ -2064,7 +3652,7 @@ async function cargarMisAsignaciones(){
   if(!sb || !usuarioActual || !usuarioActual.email) return;
   try {
     const { data, error } = await sb.from('docente_asignaciones')
-      .select('tipo_asignacion, grado, materia, observaciones')
+      .select('id, tipo_asignacion, grado, materia, observaciones')
       .eq('email', usuarioActual.email);
     if(error){
       console.warn('⚠ No se pudieron leer asignaciones (docente_asignaciones):', error.message);
@@ -2159,22 +3747,33 @@ function aplicarPermisosUI(){
     console.log('🔓 Permisos aplicados: rol ' + usuarioActual.rol + ' (acceso completo)');
   }
 
-  // 3. PASO 3.4c — Filtrar el selector de grados a los que el docente puede ver
-  const selGrado = document.getElementById('gGrado');
-  if(selGrado && esDocenteSolo()){
+  // 3. PASO 3.4c — Filtrar los selectores de grado a los que el docente puede ver
+  if(esDocenteSolo()){
     const visibles = misGradosVisibles();
     if(visibles.length === 0){
       console.warn('⚠ El docente no tiene asignaciones cargadas en docente_asignaciones');
     } else {
-      // Reconstruir el select con solo los grados visibles
-      selGrado.innerHTML = visibles.map(g =>
-        `<option value="${g}"${g === gradoActual ? ' selected' : ''}>${g}</option>`
-      ).join('');
-      // Si gradoActual no está entre los visibles, saltar al primero visible
-      if(!visibles.includes(gradoActual)){
-        gradoActual = visibles[0];
-        selGrado.value = gradoActual;
-        sv("gradoActual", gradoActual);
+      // 3a. Selector principal de Cursadas/Notas (#gGrado)
+      const selGrado = document.getElementById('gGrado');
+      if(selGrado){
+        selGrado.innerHTML = visibles.map(g =>
+          `<option value="${g}"${g === gradoActual ? ' selected' : ''}>${g}</option>`
+        ).join('');
+        if(!visibles.includes(gradoActual)){
+          gradoActual = visibles[0];
+          selGrado.value = gradoActual;
+          sv("gradoActual", gradoActual);
+        }
+      }
+      // 3b. Selector de Informes (#infGrado)
+      const selInf = document.getElementById('infGrado');
+      if(selInf){
+        const infActual = selInf.value;
+        const infNuevo = visibles.includes(infActual) ? infActual : visibles[0];
+        selInf.innerHTML = visibles.map(g =>
+          `<option value="${g}"${g === infNuevo ? ' selected' : ''}>${g}</option>`
+        ).join('');
+        selInf.value = infNuevo;
       }
     }
   }
@@ -2302,15 +3901,51 @@ async function cargarDatosDesdeSupabase(){
     // deduplicado como listado de áreas.
     aps = {};
     const materiasPorGrado = {};  // {gradoUI: [nombres]}
+    materiaIdPorNombreGrado = {};  // reset del helper global
     (materiasDB || []).forEach(m => {
       const nombre = m.nombre;
       const gradoUI = gradoAUI(m.grado);
       if(!aps[nombre]) aps[nombre] = [];
       if(!materiasPorGrado[gradoUI]) materiasPorGrado[gradoUI] = [];
       materiasPorGrado[gradoUI].push(nombre);
+      materiaIdPorNombreGrado[`${nombre}::${gradoUI}`] = m.id;   // nombre+grado → materia_id
     });
     apsLocal = JSON.parse(JSON.stringify(aps));
     window._materiasPorGrado = materiasPorGrado;   // para futuras consultas
+
+    // 2.b APRENDIZAJES BASE (Res 796/25 + los que carga cada docente/coord/dir)
+    //     RLS filtra automáticamente: aprobados + propios pendientes para docente
+    const { data: aprendizajesDB, error: errAp } = await sb.from('aprendizajes')
+      .select('id, materia_id, codigo, eje, sub_eje, nombre, origen, estado, orden, creado_por, activo')
+      .eq('activo', true)
+      .order('eje')
+      .order('orden');
+    if(errAp){
+      console.warn('⚠ No se pudieron leer aprendizajes:', errAp.message);
+      aprendizajesPorMateria = {};
+    } else {
+      aprendizajesPorMateria = {};
+      (aprendizajesDB || []).forEach(a => {
+        if(!aprendizajesPorMateria[a.materia_id]) aprendizajesPorMateria[a.materia_id] = [];
+        aprendizajesPorMateria[a.materia_id].push(a);
+      });
+    }
+
+    // 2.c EJES SUGERIDOS del DCP (para materias sin AB oficiales, como marco al cargar nuevos AB)
+    const { data: ejesDB, error: errEj } = await sb.from('ejes_sugeridos')
+      .select('id, materia_id, eje, sub_eje, origen, orden, activo')
+      .eq('activo', true)
+      .order('orden');
+    if(errEj){
+      console.warn('⚠ No se pudieron leer ejes_sugeridos:', errEj.message);
+      ejesSugeridosPorMateria = {};
+    } else {
+      ejesSugeridosPorMateria = {};
+      (ejesDB || []).forEach(e => {
+        if(!ejesSugeridosPorMateria[e.materia_id]) ejesSugeridosPorMateria[e.materia_id] = [];
+        ejesSugeridosPorMateria[e.materia_id].push(e);
+      });
+    }
 
     // 3. USUARIOS (docentes/admin/direccion/coordinador) → se vuelcan a `docentes`
     const { data: usuariosDB, error: errU } = await sb.from('usuarios')
@@ -2329,7 +3964,7 @@ async function cargarDatosDesdeSupabase(){
     // 4. ASIGNACIONES — leer toda la tabla docente_asignaciones y anidarlas por email
     //    (PASO 3.4c: para que la tab Docentes muestre quién da qué)
     const { data: asignacionesDB, error: errAs } = await sb.from('docente_asignaciones')
-      .select('email, tipo_asignacion, grado, materia, observaciones');
+      .select('id, email, tipo_asignacion, grado, materia, observaciones');
     if(errAs){
       console.warn('⚠ No se pudieron leer todas las asignaciones:', errAs.message);
     } else {
@@ -2343,18 +3978,99 @@ async function cargarDatosDesdeSupabase(){
       });
     }
 
+    // 5. EVALUACIONES + NOTAS — PASO 3.4d/3.4e: leer de Supabase y mapear al formato interno
+    //    PASO 3.4e v2: evaluaciones_aprendizajes many-to-many (una eval puede evaluar N AB)
+    const { data: evalsDB, error: errE } = await sb.from('evaluaciones')
+      .select('id, materia, grado, periodo, tipo, subtipo, descripcion, fecha, ano_escolar, docente_email, created_at');
+    if(errE){
+      console.warn('⚠ No se pudieron leer evaluaciones:', errE.message);
+      evaluaciones = [];
+    } else {
+      evaluaciones = (evalsDB || []).map(e => ({
+        id:          e.id,
+        materia:     e.materia,
+        grado:       e.grado,
+        periodo:     e.periodo,
+        tipo:        e.tipo,
+        subtipo:     e.subtipo,
+        descripcion: e.descripcion || '',
+        fecha:       e.fecha,
+        aprendizaje_ids: [],   // array de uuids de AB evaluados (lo lleno abajo)
+        ap: '',                // compat: nombres de AB concatenados, se llena abajo
+        ano_escolar: e.ano_escolar,
+        docente_email: e.docente_email,
+        notas:       {},
+        ausentes:    []
+      }));
+    }
+
+    // 5.b EVALUACIONES_APRENDIZAJES — relación muchos-a-muchos
+    const { data: evalApDB, error: errEa } = await sb.from('evaluaciones_aprendizajes')
+      .select('evaluacion_id, aprendizaje_id');
+    if(errEa){
+      console.warn('⚠ No se pudieron leer evaluaciones_aprendizajes:', errEa.message);
+    } else {
+      // Indexar por evaluacion_id y poblar aprendizaje_ids en cada ev
+      const abPorEval = {};
+      (evalApDB || []).forEach(x => {
+        if(!abPorEval[x.evaluacion_id]) abPorEval[x.evaluacion_id] = [];
+        abPorEval[x.evaluacion_id].push(x.aprendizaje_id);
+      });
+      evaluaciones.forEach(ev => {
+        ev.aprendizaje_ids = abPorEval[ev.id] || [];
+        // Resolver nombres concatenados para compat con código viejo que lee ev.ap
+        const nombres = [];
+        ev.aprendizaje_ids.forEach(abId => {
+          for(const arr of Object.values(aprendizajesPorMateria)){
+            const found = arr.find(a => a.id === abId);
+            if(found){ nombres.push(found.nombre); break; }
+          }
+        });
+        ev.ap = nombres.join(' + ');
+      });
+    }
+
+    const { data: notasDB, error: errN } = await sb.from('notas')
+      .select('id, evaluacion_id, alumno_id, nota, ausente, docente_email');
+    if(errN){
+      console.warn('⚠ No se pudieron leer notas:', errN.message);
+    } else {
+      // Indexar evaluaciones por id para armar las notas anidadas rápido
+      const evalById = {};
+      evaluaciones.forEach(e => { evalById[e.id] = e; });
+      (notasDB || []).forEach(n => {
+        const ev = evalById[n.evaluacion_id];
+        if(!ev) return;
+        if(n.ausente){
+          ev.ausentes.push(n.alumno_id);
+        } else if(n.nota !== null){
+          ev.notas[n.alumno_id] = Number(n.nota);
+        }
+        // Guardo el id de la fila `notas` para poder update/delete después
+        if(!ev._notaIds) ev._notaIds = {};
+        ev._notaIds[n.alumno_id] = n.id;
+      });
+    }
+
     // Resumen en consola y header
     const nAl = alumnos.length;
     const nMat = (materiasDB || []).length;
     const nDoc = docentes.length;
-    const texto = `🟢 Online · ${nAl} alumnos · ${nMat} materias · ${nDoc} usuarios`;
+    const nEv  = evaluaciones.length;
+    const nNo  = (notasDB || []).length;
+    const nAb  = Object.values(aprendizajesPorMateria).reduce((s,arr)=>s+arr.length,0);
+    const nEjes= Object.values(ejesSugeridosPorMateria).reduce((s,arr)=>s+arr.length,0);
+    const texto = `🟢 Online · ${nAl} alumnos · ${nMat} materias · ${nAb} AB · ${nDoc} usuarios · ${nEv} eval · ${nNo} notas`;
     setHeaderConexion(texto, '#2e5e3f');
     console.log('✓ Datos cargados desde Supabase:');
     console.log('  Alumnos:', nAl, '(por grado:', Object.fromEntries(
       Object.entries(alumnos.reduce((acc,a)=>{acc[a.grado]=(acc[a.grado]||0)+1;return acc;},{})).sort()
     ), ')');
     console.log('  Materias:', nMat, '(áreas distintas:', Object.keys(aps).length, ')');
+    console.log('  Aprendizajes Base:', nAb, '(materias con AB:', Object.keys(aprendizajesPorMateria).length, ')');
+    console.log('  Ejes sugeridos DCP:', nEjes, '(materias con ejes:', Object.keys(ejesSugeridosPorMateria).length, ')');
     console.log('  Usuarios:', nDoc);
+    console.log('  Evaluaciones:', nEv, '· Notas:', nNo);
 
   } catch(e){
     console.error('❌ Error cargando datos desde Supabase:', e);
