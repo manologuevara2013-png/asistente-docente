@@ -354,11 +354,10 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
   <div class="card">
     <div class="card-head">
       <h2 id="alTituloListado">👨‍🎓 Alumnos de 7° Grado <span id="alConteo" style="font-weight:400;font-size:13px;color:var(--text2)"></span></h2>
-      <div class="row admin-only">
-        <span style="font-size:12px;color:var(--text2);margin-right:6px">Docente a cargo:</span>
-        <select class="sel" id="docenteACargo" onchange="guardarDocenteACargo()" style="min-width:180px">
-          <option value="">— Sin asignar —</option>
-        </select>
+      <div class="row">
+        <button class="per-tab active" id="btnVistaActivos" onclick="setVistaAlumnos('activos')">👥 Activos</button>
+        <button class="per-tab" id="btnVistaBajas" onclick="setVistaAlumnos('bajas')">📤 Bajas</button>
+        <div id="docentesDelGrado" style="margin-left:12px;font-size:12px;flex:1;max-width:600px"></div>
       </div>
     </div>
     <div class="card-body" style="padding:0" id="alumnosLista"></div>
@@ -1698,11 +1697,24 @@ async function registrarCambioNota(datos){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// ALUMNOS
+// ALUMNOS — PASO 3.4b: CRUD contra Supabase + bajas
 // ════════════════════════════════════════════════════════════════════════════
+let vistaAlumnos = 'activos';  // 'activos' | 'bajas'
+
+function setVistaAlumnos(v){
+  vistaAlumnos = v;
+  document.getElementById('btnVistaActivos').classList.toggle('active', v === 'activos');
+  document.getElementById('btnVistaBajas').classList.toggle('active', v === 'bajas');
+  renderAlumnos();
+}
+
 function selGradoAlumnos(g,btn){
   gradoAlumnos=g;
-  document.querySelectorAll('#tab-alumnos .per-tab').forEach(b=>b.classList.remove('active'));
+  // Solo cambiar los botones de grado (no los de vista Activos/Bajas)
+  document.querySelectorAll('#tab-alumnos .per-tab').forEach(b=>{
+    const txt = b.textContent;
+    if(/\d+°/.test(txt)) b.classList.remove('active');
+  });
   if(btn)btn.classList.add('active');
   renderAlumnos();
 }
@@ -1737,26 +1749,57 @@ function renderAlumnos(){
   const g=gradoAlumnos;
   const elTC=document.getElementById('alTituloCarga');
   const elTL=document.getElementById('alTituloListado');
-  const elCont=document.getElementById('alConteo');
   const elLista=document.getElementById('alumnosLista');
   if(elTC) elTC.textContent=`📂 Cargar alumnos de ${g} Grado`;
-  if(elTL) elTL.innerHTML=`👨‍🎓 Alumnos de ${g} Grado <span id="alConteo" style="font-weight:400;font-size:13px;color:var(--text2)"></span>`;
-  const fils=alumnos.filter(a=>a.grado===g).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  const elC2=document.getElementById('alConteo');
-  if(elC2) elC2.textContent=`(${fils.length} alumno${fils.length!==1?'s':''})`;
+  // Filtrar por vista actual (activos vs bajas) usando el flag `activo` o el fallback por baja_fecha
+  const estaActivo = a => a.activo !== false && !a.baja_fecha;
+  const fils = alumnos
+    .filter(a => a.grado === g)
+    .filter(a => vistaAlumnos === 'activos' ? estaActivo(a) : !estaActivo(a))
+    .sort((a,b) => a.nombre.localeCompare(b.nombre));
 
-  // Docente a cargo selector
-  const selDoc=document.getElementById('docenteACargo');
-  if(selDoc) selDoc.innerHTML=`<option value="">— Sin asignar —</option>`+docentes.map(d=>`<option value="${d.id}"${docenteACargo[g]===d.id?' selected':''}>${escH(d.nombre)}</option>`).join('');
+  const prefijo = vistaAlumnos === 'activos' ? '👨‍🎓 Alumnos' : '📤 Bajas';
+  if(elTL) elTL.innerHTML=`${prefijo} de ${g} Grado <span id="alConteo" style="font-weight:400;font-size:13px;color:var(--text2)">(${fils.length} alumno${fils.length!==1?'s':''})</span>`;
+
+  // Panel de docentes del grado (lee de docente_asignaciones)
+  renderDocentesDelGrado(g);
 
   if(!elLista)return;
   if(!fils.length){
-    elLista.innerHTML=`<div class="empty" style="padding:24px"><div class="empty-icon">👨‍🎓</div>
-      <p style="margin-bottom:6px">No hay alumnos en <strong>${g} Grado</strong>.</p>
-      <p style="font-size:12px;color:var(--text2)">Usá las opciones de arriba para cargar el listado desde un Excel o agregarlos uno por uno.</p></div>`;
+    const msg = vistaAlumnos === 'activos'
+      ? `<div class="empty" style="padding:24px"><div class="empty-icon">👨‍🎓</div>
+          <p style="margin-bottom:6px">No hay alumnos activos en <strong>${g} Grado</strong>.</p>
+          <p style="font-size:12px;color:var(--text2)">Usá las opciones de arriba para cargar el listado desde un Excel o agregarlos uno por uno.</p></div>`
+      : `<div class="empty" style="padding:24px"><div class="empty-icon">📤</div>
+          <p style="margin-bottom:6px">No hay bajas registradas en <strong>${g} Grado</strong>.</p></div>`;
+    elLista.innerHTML = msg;
     return;
   }
-  let html='<table><thead><tr><th style="width:35px">Nº</th><th>Apellido y Nombre</th><th class="center">Grado</th><th class="center">Llamados</th><th class="center">Convivencia</th><th style="width:70px"></th></tr></thead><tbody>';
+
+  if(vistaAlumnos === 'bajas'){
+    // Vista Bajas: lista con fecha, motivo, botones Reincorporar y Ver historial
+    let html = '<table><thead><tr><th style="width:35px">Nº</th><th>Apellido y Nombre</th><th class="center" style="width:110px">Fecha de baja</th><th>Motivo</th><th style="width:180px"></th></tr></thead><tbody>';
+    fils.forEach((al, i) => {
+      const fb = al.baja_fecha ? new Date(al.baja_fecha).toLocaleDateString('es-AR') : '—';
+      html += `<tr style="background:#fafafa">
+        <td class="center" style="color:var(--text3)">${i+1}</td>
+        <td><strong>${escH(al.nombre)}</strong>${badgesInclusion(al)}</td>
+        <td class="center" style="font-size:11px;color:var(--text2)">${fb}</td>
+        <td style="font-size:12px;color:var(--text2)">${escH(al.baja_motivo || '—')}</td>
+        <td class="center">${esAdminDirCoord() ? `
+          <button class="btn btn-outline btn-xs" onclick="verHistorialAlumno('${al.id}')" title="Ver historial completo">👁 Historial</button>
+          <button class="btn btn-green btn-xs" onclick="reincorporarAlumno('${al.id}')" title="Reincorporar">🔄 Reincorporar</button>
+        ` : '<span style="color:var(--text3);font-size:11px">—</span>'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    elLista.innerHTML = html;
+    updateHeaderStats();
+    return;
+  }
+
+  // Vista Activos (default)
+  let html='<table><thead><tr><th style="width:35px">Nº</th><th>Apellido y Nombre</th><th class="center">Grado</th><th class="center">Llamados</th><th class="center">Convivencia</th><th style="width:140px"></th></tr></thead><tbody>';
   fils.forEach((al,i)=>{
     const ll=llamados[al.id]||0;const cv=notaConvivencia(al.id,al.grado,periodoActual);const cal=convCalificacion(cv);
     html+=`<tr>
@@ -1765,9 +1808,10 @@ function renderAlumnos(){
       <td class="center">${al.grado}</td>
       <td class="center" style="color:${ll>0?'var(--red)':'var(--text3)'}"><strong>${ll}</strong></td>
       <td class="center"><span class="nota-badge ${notaCls(cv)}">${formatN(cv)}</span> <span class="badge ${cal.cls}" style="font-size:10px">${cal.label}</span></td>
-      <td class="center">${esDocenteSolo() ? '<span style="color:var(--text3);font-size:11px">—</span>' : `
-        <button class="btn btn-outline btn-xs" onclick="editarAlumno('${al.id}')" title="Editar">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="eliminarAlumno('${al.id}')" title="Eliminar">✕</button>`}
+      <td class="center">${esAdminDirCoord() ? `
+        <button class="btn btn-outline btn-xs" onclick="editarAlumno('${al.id}')" title="Editar nombre/grado">✏️</button>
+        <button class="btn btn-outline btn-xs" onclick="transferirAlumno('${al.id}')" title="Transferir de grado">📍</button>
+        <button class="btn btn-red btn-xs" onclick="darDeBajaAlumno('${al.id}')" title="Dar de baja">📤</button>` : '<span style="color:var(--text3);font-size:11px">—</span>'}
       </td>
     </tr>`;
   });
@@ -1775,26 +1819,352 @@ function renderAlumnos(){
   elLista.innerHTML=html;
   updateHeaderStats();
 }
-function agregarAlumno(){
+async function agregarAlumno(){
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación pueden agregar alumnos.'); return; }
   const n=document.getElementById("nuevoNombre").value.trim();
-  if(!n)return;
-  alumnos.push({id:nextId++,nombre:n,grado:gradoAlumnos});
-  document.getElementById("nuevoNombre").value="";
-  document.getElementById("nuevoNombre").focus();
-  guardarTodo();renderAlumnos();
+  if(!n) return;
+  if(!sb){ alert('Sin conexión a Supabase'); return; }
+  try {
+    const { data, error } = await sb.from('alumnos').insert({
+      nombre: n,
+      grado: gradoADB(gradoAlumnos),   // "7°" → "7º grado"
+      nivel: 'Primario',
+      activo: true,
+      ano_escolar: new Date().getFullYear().toString()
+    }).select().single();
+    if(error){ alert('❌ No se pudo agregar: ' + error.message); return; }
+    // Agregar a cache local con grado UI normalizado
+    alumnos.push({
+      id: data.id,
+      nombre: data.nombre,
+      grado: gradoAUI(data.grado),
+      nivel: data.nivel,
+      activo: true,
+      _db: data
+    });
+    document.getElementById("nuevoNombre").value="";
+    document.getElementById("nuevoNombre").focus();
+    renderAlumnos();
+    // Auditoría
+    registrarAuditoria({
+      tabla: 'alumnos', operacion: 'INSERT', registro_id: data.id,
+      motivo: 'Alta manual desde GEI', datos_nuevo: {nombre: n, grado: gradoAlumnos}
+    });
+  } catch(e){ alert('❌ Error: ' + e.message); }
 }
+
 function editarAlumno(id){
-  const al=alumnos.find(a=>a.id===id);if(!al)return;
-  const nuevoNombre=prompt('Editar nombre:',al.nombre);
-  if(nuevoNombre!==null&&nuevoNombre.trim()){al.nombre=nuevoNombre.trim();guardarTodo();renderAlumnos();}
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación pueden editar.'); return; }
+  const al = alumnos.find(a => a.id === id);
+  if(!al) return;
+  // Modal con nombre + grado
+  const gradosDisponibles = Object.keys(window._materiasPorGrado || {}).length
+    ? Object.keys(window._materiasPorGrado).sort()
+    : ['1°','2°','3°','4°','5°','6°','7°'];
+  const html = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:460px"><div class="modal-head"><h3>✏️ Editar alumno</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:10px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px">Nombre (Apellido, Nombre)</label>
+        <input class="inp" id="edAlNombre" value="${escH(al.nombre)}" style="width:100%"></div>
+      <div style="margin-bottom:10px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px">Grado</label>
+        <select class="sel" id="edAlGrado" style="width:100%">
+          ${gradosDisponibles.map(g=>`<option${g===al.grado?' selected':''}>${g}</option>`).join('')}
+        </select></div>
+      <div style="text-align:right;margin-top:14px">
+        <button class="btn btn-outline btn-sm" onclick="this.closest('.modal-overlay').remove()" style="margin-right:6px">Cancelar</button>
+        <button class="btn btn-green btn-sm" onclick="guardarEditarAlumno('${id}')">💾 Guardar</button>
+      </div>
+    </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('edAlNombre').focus();
 }
-function eliminarAlumno(id){const alE=alumnos.find(a=>a.id===id);accionProtegida(()=>{if(!confirm("¿Eliminar este alumno?"))return;alumnos=alumnos.filter(a=>a.id!==id);guardarTodo();renderAlumnos();},'Eliminar alumno: '+(alE?alE.nombre:'ID '+id));}
+
+async function guardarEditarAlumno(id){
+  const al = alumnos.find(a => a.id === id);
+  if(!al) return;
+  const nuevoNombre = document.getElementById('edAlNombre').value.trim();
+  const nuevoGrado = document.getElementById('edAlGrado').value;
+  if(!nuevoNombre){ alert('Nombre vacío'); return; }
+  if(nuevoNombre === al.nombre && nuevoGrado === al.grado){
+    document.querySelector('.modal-overlay').remove(); return;
+  }
+  if(!sb){ alert('Sin conexión'); return; }
+  const anterior = { nombre: al.nombre, grado: al.grado };
+  accionProtegida(async () => {
+    try {
+      const { data, error } = await sb.from('alumnos').update({
+        nombre: nuevoNombre, grado: gradoADB(nuevoGrado)
+      }).eq('id', id).select().single();
+      if(error){ alert('❌ ' + error.message); return; }
+      al.nombre = nuevoNombre; al.grado = nuevoGrado;
+      document.querySelector('.modal-overlay').remove();
+      renderAlumnos();
+    } catch(e){ alert('❌ ' + e.message); }
+  }, 'Editar alumno: ' + al.nombre, {
+    tabla:'alumnos', operacion:'UPDATE', registro_id:id,
+    datos_anterior: anterior, datos_nuevo: {nombre:nuevoNombre, grado:nuevoGrado}
+  });
+}
+
+// Dar de baja (soft delete): activo=false + baja_fecha + baja_motivo
+function darDeBajaAlumno(id){
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación.'); return; }
+  const al = alumnos.find(a => a.id === id);
+  if(!al) return;
+  accionProtegida(async () => {
+    if(!confirm(`¿Dar de baja a "${al.nombre}"?\n\nEl alumno desaparecerá del listado activo pero su historial completo (notas, evaluaciones, convivencia) se conserva. Podés reincorporarlo cuando quieras desde la pestaña "📤 Bajas".`)) return;
+    if(!sb) return;
+    try {
+      const motivo = window._ultimoMotivo || '';
+      const { error } = await sb.from('alumnos').update({
+        activo: false,
+        baja_fecha: new Date().toISOString(),
+        baja_motivo: motivo
+      }).eq('id', id);
+      if(error){ alert('❌ ' + error.message); return; }
+      al.activo = false;
+      al.baja_fecha = new Date().toISOString();
+      al.baja_motivo = motivo;
+      renderAlumnos();
+      updateHeaderStats();
+    } catch(e){ alert('❌ ' + e.message); }
+  }, 'Dar de baja alumno: ' + al.nombre, {
+    tabla:'alumnos', operacion:'UPDATE', registro_id:id,
+    datos_anterior: {activo:true}, datos_nuevo: {activo:false}
+  });
+}
+
+function reincorporarAlumno(id){
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación.'); return; }
+  const al = alumnos.find(a => a.id === id);
+  if(!al) return;
+  accionProtegida(async () => {
+    if(!confirm(`¿Reincorporar a "${al.nombre}"?\n\nEl alumno vuelve al listado activo del grado ${al.grado}. Su historial anterior está intacto.`)) return;
+    if(!sb) return;
+    try {
+      const { error } = await sb.from('alumnos').update({
+        activo: true, baja_fecha: null, baja_motivo: null
+      }).eq('id', id);
+      if(error){ alert('❌ ' + error.message); return; }
+      al.activo = true; al.baja_fecha = null; al.baja_motivo = null;
+      renderAlumnos();
+      updateHeaderStats();
+    } catch(e){ alert('❌ ' + e.message); }
+  }, 'Reincorporar alumno: ' + al.nombre, {
+    tabla:'alumnos', operacion:'UPDATE', registro_id:id,
+    datos_anterior: {activo:false}, datos_nuevo: {activo:true}
+  });
+}
+
+function transferirAlumno(id){
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación.'); return; }
+  const al = alumnos.find(a => a.id === id);
+  if(!al) return;
+  const gradosDisponibles = (Object.keys(window._materiasPorGrado || {}).sort()).filter(g => g !== al.grado);
+  if(!gradosDisponibles.length){ alert('No hay otros grados disponibles.'); return; }
+  const html = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:460px"><div class="modal-head"><h3>📍 Transferir alumno</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px"><strong>Alumno:</strong> ${escH(al.nombre)}<br><strong>Grado actual:</strong> ${escH(al.grado)}</p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:12px">El historial de notas y convivencia queda vinculado al grado en que se cursó. Útil si el alumno repite, pasa de división o hubo error de carga.</p>
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px">Nuevo grado</label>
+      <select class="sel" id="trAlGrado" style="width:100%">
+        ${gradosDisponibles.map(g=>`<option>${g}</option>`).join('')}
+      </select>
+      <div style="text-align:right;margin-top:14px">
+        <button class="btn btn-outline btn-sm" onclick="this.closest('.modal-overlay').remove()" style="margin-right:6px">Cancelar</button>
+        <button class="btn btn-pri btn-sm" onclick="confirmarTransferirAlumno('${id}')">📍 Transferir</button>
+      </div>
+    </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function confirmarTransferirAlumno(id){
+  const al = alumnos.find(a => a.id === id);
+  const nuevoGrado = document.getElementById('trAlGrado').value;
+  if(!al || !nuevoGrado) return;
+  const gradoAnt = al.grado;
+  accionProtegida(async () => {
+    if(!sb) return;
+    try {
+      const { error } = await sb.from('alumnos').update({ grado: gradoADB(nuevoGrado) }).eq('id', id);
+      if(error){ alert('❌ ' + error.message); return; }
+      al.grado = nuevoGrado;
+      document.querySelector('.modal-overlay').remove();
+      renderAlumnos();
+    } catch(e){ alert('❌ ' + e.message); }
+  }, `Transferir alumno ${al.nombre}: ${gradoAnt} → ${nuevoGrado}`, {
+    tabla:'alumnos', operacion:'UPDATE', registro_id:id,
+    datos_anterior:{grado:gradoAnt}, datos_nuevo:{grado:nuevoGrado}
+  });
+}
+
+// Ver historial del alumno dado de baja (modal con sus notas, evaluaciones, conducta)
+function verHistorialAlumno(id){
+  const al = alumnos.find(a => a.id === id);
+  if(!al) return;
+  // Reutilizo el motor de informes: setear la vista "alumno" temporalmente y renderear
+  const matsG = (window._materiasPorGrado || {})[al.grado] || [];
+  const fb = al.baja_fecha ? new Date(al.baja_fecha).toLocaleString('es-AR') : '—';
+  let html = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:900px;max-height:85vh;overflow-y:auto"><div class="modal-head" style="background:var(--text2)"><h3>👁 Historial — ${escH(al.nombre)}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <div style="padding:10px;background:#fff8f8;border-left:3px solid var(--red);margin-bottom:14px;font-size:12px">
+        <strong>📤 Alumno dado de baja</strong><br>
+        <strong>Grado:</strong> ${escH(al.grado)} · <strong>Fecha de baja:</strong> ${fb}<br>
+        <strong>Motivo:</strong> ${escH(al.baja_motivo || '—')}
+      </div>`;
+  if(!matsG.length){
+    html += `<p style="color:var(--text3);font-style:italic">Sin materias registradas para ${escH(al.grado)}.</p>`;
+  } else {
+    html += `<h4 style="margin-bottom:8px;font-size:13px">📊 Promedios por materia (todos los períodos)</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#eef2f6"><th style="padding:6px 8px;text-align:left">Materia</th>${PERIODOS.map(p=>`<th style="padding:6px 8px;text-align:center">${escH(p)}</th>`).join('')}<th style="padding:6px 8px;text-align:center;background:#dde6ee">Anual</th></tr></thead><tbody>`;
+    matsG.forEach(m => {
+      const perNotas = PERIODOS.map(p => promedioAlumnoMatPer(al.id, m, al.grado, p));
+      const anual = promedioAlumnoMatAnual(al.id, m, al.grado);
+      html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:6px 8px">${escH(m)}</td>${perNotas.map(n => {
+        if(n === null) return `<td style="padding:6px 8px;text-align:center;color:#ccc">—</td>`;
+        const c = n >= 7 ? '#2e5e3f' : n >= 6 ? '#c9b06a' : '#a34434';
+        return `<td style="padding:6px 8px;text-align:center;color:${c};font-weight:600">${n.toFixed(2)}</td>`;
+      }).join('')}<td style="padding:6px 8px;text-align:center;font-weight:700;background:#f5f8fa;color:${anual===null?'#999':anual>=7?'#2e5e3f':anual>=6?'#c9b06a':'#a34434'}">${anual!==null?anual.toFixed(2):'—'}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  const totalEvs = evaluaciones.filter(e => e.notas[al.id] !== undefined).length;
+  const ll = llamados[al.id] || 0;
+  html += `<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+    <div style="background:#eef2f6;padding:8px 14px;border-radius:6px;font-size:12px"><strong>${totalEvs}</strong> evaluaciones</div>
+    <div style="background:${ll>0?'#f8d7da':'#d4edda'};padding:8px 14px;border-radius:6px;font-size:12px"><strong>${ll}</strong> llamados de atención</div>
+  </div>`;
+  html += `<div style="text-align:right;margin-top:16px">
+    <button class="btn btn-outline btn-sm" onclick="this.closest('.modal-overlay').remove()">Cerrar</button>
+  </div></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// Función legacy mantenida por compat (otras partes la pueden llamar)
+function eliminarAlumno(id){ darDeBajaAlumno(id); }
 function cambiarLlamado(id,d){llamados[id]=Math.max(0,(llamados[id]||0)+d);guardarTodo();renderAlumnos();}
-function guardarDocenteACargo(){
-  const val=document.getElementById('docenteACargo').value;
-  docenteACargo[gradoAlumnos]=val?parseInt(val):'';
-  guardarTodo();
+// Render del panel "docentes del grado" (lee de docente_asignaciones)
+function renderDocentesDelGrado(g){
+  const el = document.getElementById('docentesDelGrado');
+  if(!el){ return; }
+  if(vistaAlumnos !== 'activos'){ el.innerHTML = ''; return; }
+
+  // Buscar titulares (puede haber más de uno) y docentes de materia del grado
+  const asig = window._todasLasAsignaciones || [];
+  const titulares = asig.filter(a => a.tipo_asignacion === 'titular' && a.grado === g);
+  const porMateria = asig.filter(a => a.tipo_asignacion === 'materia' && a.grado === g);
+
+  // Agrupar docentes de materia por materia (una materia puede tener varios docentes)
+  const porMat = {};
+  porMateria.forEach(a => {
+    if(!a.materia) return;
+    if(!porMat[a.materia]) porMat[a.materia] = [];
+    porMat[a.materia].push(a.nombre_completo || a.email || '(sin nombre)');
+  });
+
+  const titulText = titulares.length
+    ? titulares.map(t => escH(t.nombre_completo || t.email || '(sin nombre)')).join(', ')
+    : '<span style="color:var(--text3);font-style:italic">— Sin titular asignado —</span>';
+
+  const puedeEditar = esAdminDirCoord();
+  const materiasOrdenadas = Object.keys(porMat).sort();
+
+  let html = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <strong style="color:var(--text2)">📌 Titular ${escH(g)}:</strong>
+    <span>${titulText}</span>
+    ${puedeEditar ? `<button class="btn btn-outline btn-xs" onclick="abrirCambiarTitular('${g}')" title="Cambiar titular">✏️</button>` : ''}
+    ${materiasOrdenadas.length ? `
+      <details style="margin-left:8px">
+        <summary style="cursor:pointer;color:var(--pri);font-weight:600">📚 Docentes de materia (${materiasOrdenadas.length})</summary>
+        <div style="margin-top:6px;padding:8px;background:#f9fafb;border-radius:6px;max-width:600px">
+          ${materiasOrdenadas.map(m => `
+            <div style="padding:2px 0;font-size:11px"><strong>${escH(m)}:</strong> ${porMat[m].map(n => escH(n)).join(', ')}</div>
+          `).join('')}
+        </div>
+      </details>
+    ` : ''}
+  </div>`;
+  el.innerHTML = html;
 }
+
+// Modal para cambiar titular del grado
+function abrirCambiarTitular(g){
+  if(!esAdminDirCoord()){ alert('⛔ Solo admin/dirección/coordinación.'); return; }
+  const asig = window._todasLasAsignaciones || [];
+  const titularActual = asig.find(a => a.tipo_asignacion === 'titular' && a.grado === g);
+  const emailActual = titularActual ? titularActual.email : '';
+  // Lista de todos los docentes del plantel (de docente_asignaciones unique por email)
+  const emailsUnicos = [...new Set(asig.map(a => a.email).filter(Boolean))].sort();
+  const opcionesHtml = emailsUnicos.map(em => {
+    const a = asig.find(x => x.email === em);
+    const nombre = a ? (a.nombre_completo || em) : em;
+    return `<option value="${escH(em)}"${em === emailActual ? ' selected' : ''}>${escH(nombre)} <${escH(em)}></option>`;
+  }).join('');
+  const html = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="max-width:520px"><div class="modal-head"><h3>✏️ Cambiar titular de ${escH(g)}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px"><strong>Titular actual:</strong> ${titularActual ? escH(titularActual.nombre_completo||titularActual.email) : '<em>sin asignar</em>'}</p>
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px">Nuevo titular</label>
+      <select class="sel" id="selNuevoTitular" style="width:100%">${opcionesHtml}</select>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px">La asignación anterior se reemplaza. Queda registrado en auditoría con motivo obligatorio.</p>
+      <div style="text-align:right;margin-top:14px">
+        <button class="btn btn-outline btn-sm" onclick="this.closest('.modal-overlay').remove()" style="margin-right:6px">Cancelar</button>
+        <button class="btn btn-green btn-sm" onclick="guardarCambioTitular('${g}')">💾 Guardar</button>
+      </div>
+    </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function guardarCambioTitular(g){
+  const nuevoEmail = document.getElementById('selNuevoTitular').value;
+  if(!nuevoEmail){ alert('Elegí un docente.'); return; }
+  const asig = window._todasLasAsignaciones || [];
+  const titularActual = asig.find(a => a.tipo_asignacion === 'titular' && a.grado === g);
+  const emailAnt = titularActual ? titularActual.email : null;
+  if(emailAnt === nuevoEmail){ document.querySelector('.modal-overlay').remove(); return; }
+
+  const docenteNuevo = asig.find(a => a.email === nuevoEmail);
+  const nombreNuevo = docenteNuevo ? (docenteNuevo.nombre_completo || nuevoEmail) : nuevoEmail;
+
+  accionProtegida(async () => {
+    if(!sb) return;
+    try {
+      // 1) Borrar titular anterior si existe
+      if(titularActual){
+        const { error: errDel } = await sb.from('docente_asignaciones')
+          .delete().eq('id', titularActual.id);
+        if(errDel){ alert('❌ Error quitando titular anterior: ' + errDel.message); return; }
+      }
+      // 2) Insertar nuevo titular
+      const { data, error: errIns } = await sb.from('docente_asignaciones').insert({
+        email: nuevoEmail,
+        nombre_completo: nombreNuevo,
+        rol: 'docente',
+        tipo_asignacion: 'titular',
+        grado: g,
+        materia: null
+      }).select().single();
+      if(errIns){ alert('❌ Error asignando nuevo titular: ' + errIns.message); return; }
+      // 3) Actualizar cache local
+      if(titularActual){
+        window._todasLasAsignaciones = asig.filter(a => a.id !== titularActual.id);
+      }
+      window._todasLasAsignaciones.push(data);
+      document.querySelector('.modal-overlay').remove();
+      renderDocentesDelGrado(g);
+      alert('✅ Titular actualizado');
+    } catch(e){ alert('❌ ' + e.message); }
+  }, `Cambiar titular de ${g}: ${emailAnt||'(sin titular)'} → ${nuevoEmail}`, {
+    tabla: 'docente_asignaciones', operacion: 'UPDATE', registro_id: g,
+    datos_anterior: {titular: emailAnt}, datos_nuevo: {titular: nuevoEmail}
+  });
+}
+
+// Stub: función vieja, ya no se usa (quedaba de localStorage)
+function guardarDocenteACargo(){ /* obsoleto — ahora se usa docente_asignaciones */ }
 function descargarPlantillaAlumnos(){
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([
@@ -3963,11 +4333,14 @@ async function cargarDatosDesdeSupabase(){
 
     // 4. ASIGNACIONES — leer toda la tabla docente_asignaciones y anidarlas por email
     //    (PASO 3.4c: para que la tab Docentes muestre quién da qué)
+    //    PASO 3.4b: guardar también en window._todasLasAsignaciones para el panel de alumnos
     const { data: asignacionesDB, error: errAs } = await sb.from('docente_asignaciones')
-      .select('id, email, tipo_asignacion, grado, materia, observaciones');
+      .select('id, email, nombre_completo, rol, tipo_asignacion, grado, materia, observaciones');
     if(errAs){
       console.warn('⚠ No se pudieron leer todas las asignaciones:', errAs.message);
+      window._todasLasAsignaciones = [];
     } else {
+      window._todasLasAsignaciones = asignacionesDB || [];
       const porEmail = {};
       (asignacionesDB || []).forEach(a => {
         if(!porEmail[a.email]) porEmail[a.email] = [];
