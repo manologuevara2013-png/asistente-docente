@@ -224,6 +224,7 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
   <button onclick="showTab('alumnos')">👨‍🎓 Alumnos</button>
   <button onclick="showTab('docentes')">👩‍🏫 Docentes</button>
   <button onclick="showTab('informes')">📊 Informes</button>
+  <button id="btnTabMisCasosSoe" onclick="showTab('misCasosSoe')" style="display:none">📥 Mis casos SOE <span id="badgeMisCasosSoe" style="display:none;background:#a34434;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
   <button onclick="showTab('auditoria')">📋 Auditoría</button>
   <button onclick="alert('🔒 Asistente IA en desarrollo con Claude Haiku.\n\nEstará disponible próximamente integrado con la plataforma institucional.')" style="opacity:0.6;cursor:help">🤖 Asistente IA 🔒</button>
   <button onclick="showTab('config')">⚙️ Config</button>
@@ -439,6 +440,37 @@ body.rol-docente .solo-lectura-banner { display: block !important; }
   </div>
 </div>
 
+<!-- ═══ TAB: MIS CASOS SOE ═══ -->
+<div id="tab-misCasosSoe" class="hidden">
+  <div class="card">
+    <div class="card-head">
+      <h2>📥 Mis casos SOE — Derivaciones y seguimiento</h2>
+      <div class="row">
+        <select id="filtroEstadoMisCasosSoe" onchange="renderMisCasosSoe()" class="input input-sm">
+          <option value="">Todos los estados</option>
+          <option value="solicitado">Solicitado (pendiente)</option>
+          <option value="abierto">Abierto</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="cerrado">Cerrado</option>
+        </select>
+        <select id="filtroAreaMisCasosSoe" onchange="renderMisCasosSoe()" class="input input-sm">
+          <option value="">Todas las áreas</option>
+          <option value="academico_psicopedagogico">Académico-psicopedagógico</option>
+          <option value="vocacional">Vocacional</option>
+          <option value="emocional_convivencial">Emocional-convivencial</option>
+          <option value="familia_docentes">Familia-docentes</option>
+        </select>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="background:#fff3e6;border-left:4px solid #d97706;padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:13px;color:#92400e">
+        ℹ️ Acá ves los casos SOE donde participás como docente involucrado. Las entradas que ves son solo las que Dirección o la Psicopedagoga eligieron compartir. Podés escribir observaciones para aportar al caso.
+      </div>
+      <div id="listaMisCasosSoe"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ TAB: CHAT ═══ -->
 <div id="tab-chat" class="hidden">
   <div class="card">
@@ -552,6 +584,7 @@ let modoOnline = false;
 let usuarioLog = null;
 let usuarioActual = null;
 let misAsignaciones = [];  // filas de docente_asignaciones del usuario logueado (PASO 3.4c)
+let misCasosSoe = [];       // casos SOE donde el docente está involucrado (PASO SOE colab)
 
 try {
   if (window.supabase && window.supabase.createClient) {
@@ -937,17 +970,19 @@ function showTab(t){
       t==='alumnos'?txt.includes('alumno'):
       t==='docentes'?txt.includes('docente'):
       t==='informes'?txt.includes('informe'):
+      t==='misCasosSoe'?txt.includes('mis casos soe'):
       t==='auditoria'?txt.includes('auditor'):
       t==='chat'?txt.includes('asistente'):
       txt.includes('config'));
   });
-  ['cursadas','alumnos','docentes','informes','auditoria','chat','config'].forEach(id=>{
+  ['cursadas','alumnos','docentes','informes','misCasosSoe','auditoria','chat','config'].forEach(id=>{
     const el=document.getElementById('tab-'+id);if(el)el.classList.toggle('hidden',id!==t);
   });
   if(t==='cursadas'){renderPerTabs();renderCursadas();}
   if(t==='alumnos')renderAlumnos();
   if(t==='docentes')renderDocentes();
   if(t==='informes')iniciarPanelInformes();
+  if(t==='misCasosSoe')renderMisCasosSoe();
   if(t==='auditoria')renderAuditoria();
   if(t==='config'){
     // Si no hay materia seleccionada todavía, seleccionar la primera disponible
@@ -1812,7 +1847,7 @@ function renderAlumnos(){
       <td class="center">${esAdminDirCoord() ? `
         <button class="btn btn-outline btn-xs" onclick="editarAlumno('${al.id}')" title="Editar nombre/grado">✏️</button>
         <button class="btn btn-outline btn-xs" onclick="transferirAlumno('${al.id}')" title="Transferir de grado">📍</button>
-        <button class="btn btn-red btn-xs" onclick="darDeBajaAlumno('${al.id}')" title="Dar de baja">📤</button>` : '<span style="color:var(--text3);font-size:11px">—</span>'}
+        <button class="btn btn-red btn-xs" onclick="darDeBajaAlumno('${al.id}')" title="Dar de baja">📤</button>` : (esDocenteDerivador(al.grado) ? `<button class="btn btn-outline btn-xs" onclick="abrirModalDerivarSOE('${al.id}')" title="Derivar al SOE" style="background:#fff3e6;border-color:#d97706;color:#92400e">🆘</button>` : '<span style="color:var(--text3);font-size:11px">—</span>')}
       </td>
     </tr>`;
   });
@@ -3890,6 +3925,9 @@ async function cargarRolGEI(){
     // PASO 3.4c — Cargar también las asignaciones del docente logueado
     await cargarMisAsignaciones();
 
+    // PASO SOE colab — Cargar casos SOE donde el docente está involucrado
+    await cargarMisCasosSoe();
+
     // Mostrar el nombre y rol en el header
     const rolEmoji = {
       'desarrollador': '🔧',
@@ -4019,6 +4057,54 @@ function updateHeaderStats(){ /* noop */ }
 // ════════════════════════════════════════════════════════════════════════════
 // PERMISOS POR ROL — PASO 3.4c
 // ════════════════════════════════════════════════════════════════════════════
+
+// Devuelve true si el usuario logueado puede derivar al SOE alumnos del grado dado.
+// Son los docentes titulares o docentes de materia; admin/dir/coord/dev y psicopedagoga
+// no derivan desde acá (usan la app SOE directamente).
+function esDocenteDerivador(gradoAlumno){
+  if(!usuarioActual) return false;
+  if(esAdminDirCoord()) return false;      // ellos abren casos directo en SOE
+  if(soyPsicopedagoga()) return false;     // también usa SOE directo
+  // gradoAlumno viene en formato "7°"; las asignaciones usan "7º grado"
+  const gDB = typeof gradoADB === 'function' ? gradoADB(gradoAlumno) : gradoAlumno;
+  return misAsignaciones.some(a =>
+    ['titular','materia'].includes(a.tipo_asignacion) &&
+    (a.grado === gDB || a.grado === gradoAlumno)
+  );
+}
+
+// Lee de Supabase los casos SOE donde el usuario logueado está en docentes_involucrados.
+async function cargarMisCasosSoe(){
+  misCasosSoe = [];
+  if(!sb || !usuarioActual || !usuarioActual.email) return;
+  // Solo tiene sentido para docentes (no psicopedagoga, no admin/dir/coord/dev)
+  if(esAdminDirCoord() || soyPsicopedagoga()) return;
+  try {
+    const { data, error } = await sb.from('casos_soe')
+      .select('id, alumno_id, area, titulo, motivo_apertura, estado, prioridad, confidencial, fecha_apertura, fecha_cierre, motivo_cierre, abierto_por, derivado_a, docentes_involucrados, created_at, updated_at')
+      .contains('docentes_involucrados', [usuarioActual.email])
+      .order('updated_at', { ascending: false });
+    if(error){
+      console.warn('⚠ No se pudieron leer mis casos SOE:', error.message);
+      return;
+    }
+    misCasosSoe = data || [];
+    console.log('✓ Mis casos SOE:', misCasosSoe.length);
+    // Mostrar la tab y badge si hay casos
+    const btnTab = document.getElementById('btnTabMisCasosSoe');
+    const badge = document.getElementById('badgeMisCasosSoe');
+    if(btnTab){
+      btnTab.style.display = (misAsignaciones.some(a => ['titular','materia'].includes(a.tipo_asignacion))) ? '' : 'none';
+    }
+    if(badge){
+      const pendientes = misCasosSoe.filter(c => c.estado !== 'cerrado').length;
+      badge.textContent = pendientes;
+      badge.style.display = pendientes > 0 ? '' : 'none';
+    }
+  } catch(e){
+    console.warn('⚠ Error cargando mis casos SOE:', e);
+  }
+}
 
 // Lee de Supabase todas las filas de docente_asignaciones que matcheen el email
 // del usuario logueado. Se llama después de cargarRolGEI().
@@ -4467,6 +4553,317 @@ async function recargarDatos(){
   if(btn){ btn.disabled = false; btn.textContent = '🔄 Recargar'; }
 }
 
+
+// ════════════════════════════════════════════════════════════════════════════
+// SOE — COLABORACIÓN DOCENTE ↔ SOE (derivación + seguimiento)
+// ════════════════════════════════════════════════════════════════════════════
+
+const AREAS_SOE = {
+  'academico_psicopedagogico': 'Académico-psicopedagógico',
+  'vocacional': 'Vocacional',
+  'emocional_convivencial': 'Emocional-convivencial',
+  'familia_docentes': 'Familia-docentes'
+};
+
+const ESTADOS_SOE = {
+  'solicitado':  {label: 'Solicitado (pendiente)', color: '#d97706'},
+  'abierto':     {label: 'Abierto',                color: '#2e5e3f'},
+  'en_proceso':  {label: 'En proceso',             color: '#1d3a5f'},
+  'cerrado':     {label: 'Cerrado',                color: '#6b7280'}
+};
+
+const PRIORIDADES_SOE = {
+  'baja':   {label: 'Baja',   color: '#6b7280'},
+  'media':  {label: 'Media',  color: '#d97706'},
+  'alta':   {label: 'Alta',   color: '#a34434'}
+};
+
+// ─── Modal: Derivar al SOE ───────────────────────────────────────────────────
+function abrirModalDerivarSOE(alumnoId){
+  const al = (D.alumnos || alumnos || []).find(x => x.id === alumnoId);
+  if(!al){ alert('Alumno no encontrado.'); return; }
+  if(!esDocenteDerivador(al.grado)){
+    alert('⛔ No tenés permiso para derivar este alumno al SOE.');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:560px">
+      <div class="modal-head">
+        <h3>🆘 Derivar al SOE</h3>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#fff3e6;border-left:4px solid #d97706;padding:10px 14px;border-radius:4px;margin-bottom:14px;font-size:12px;color:#92400e;line-height:1.5">
+          Esta solicitud llegará a <strong>Dirección y Psicopedagoga</strong>. Verán el alumno, área, motivo y tu nombre. Ellos deciden si abrir un caso formal o cerrarlo. Si lo aceptan, podrás seguir las medidas que compartan desde la tab <strong>"📥 Mis casos SOE"</strong>.
+        </div>
+
+        <div class="form-row">
+          <label>Alumno</label>
+          <input type="text" class="input" value="${escH(al.nombre)} · ${al.grado}" readonly style="background:#f3f4f6">
+        </div>
+
+        <div class="form-row">
+          <label>Área sugerida <span style="color:#a34434">*</span></label>
+          <select id="derivArea" class="input">
+            ${Object.entries(AREAS_SOE).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Prioridad sugerida</label>
+          <select id="derivPrioridad" class="input">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Motivo observado <span style="color:#a34434">*</span> <span style="color:#6b7280;font-size:11px">(mín. 20 caracteres)</span></label>
+          <textarea id="derivMotivo" class="input" rows="5" placeholder="Describí lo observado en el aula: comportamiento, dificultad, situación familiar conocida, etc. Sé concreto y objetivo."></textarea>
+          <div id="derivMotivoCount" style="font-size:11px;color:#6b7280;text-align:right;margin-top:2px">0 caracteres</div>
+        </div>
+
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="derivConfidencial" checked>
+            <span>Marcar como confidencial (solo direccion/psicopedagoga)</span>
+          </label>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+          <button class="btn btn-pri" onclick="enviarDerivacionSOE('${alumnoId}')">📤 Enviar al SOE</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const txt = overlay.querySelector('#derivMotivo');
+  const counter = overlay.querySelector('#derivMotivoCount');
+  txt.addEventListener('input', () => {
+    const n = txt.value.trim().length;
+    counter.textContent = n + ' caracteres' + (n < 20 ? ' (faltan ' + (20-n) + ')' : ' ✓');
+    counter.style.color = n < 20 ? '#a34434' : '#2e5e3f';
+  });
+}
+
+async function enviarDerivacionSOE(alumnoId){
+  const al = (D.alumnos || alumnos || []).find(x => x.id === alumnoId);
+  if(!al) return;
+  const area = document.getElementById('derivArea').value;
+  const prioridad = document.getElementById('derivPrioridad').value;
+  const motivo = document.getElementById('derivMotivo').value.trim();
+  const confidencial = document.getElementById('derivConfidencial').checked;
+
+  if(motivo.length < 20){
+    alert('⚠ El motivo debe tener al menos 20 caracteres.');
+    return;
+  }
+  if(!sb){
+    alert('❌ Sin conexión a Supabase. No se puede derivar.');
+    return;
+  }
+
+  const btn = document.querySelector('.modal-overlay .btn-pri');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+
+  try {
+    const { data, error } = await sb.from('casos_soe').insert({
+      alumno_id: alumnoId,
+      area: area,
+      titulo: `Derivación docente — ${al.nombre}`,
+      motivo_apertura: motivo,
+      estado: 'solicitado',
+      prioridad: prioridad,
+      confidencial: confidencial,
+      abierto_por: usuarioActual.id,
+      fecha_apertura: new Date().toISOString()
+    }).select().single();
+
+    if(error) throw error;
+
+    // Auditoría
+    if(typeof registrarAuditoria === 'function'){
+      await registrarAuditoria({
+        tabla: 'casos_soe',
+        operacion: 'INSERT',
+        registro_id: data.id,
+        motivo: 'Derivación docente al SOE',
+        datos_nuevo: { alumno: al.nombre, area: area, prioridad: prioridad }
+      });
+    }
+
+    alert('✓ Derivación enviada al SOE.\n\nAlumno: ' + al.nombre + '\nÁrea: ' + AREAS_SOE[area] + '\n\nDirección/Psicopedagoga lo revisarán y decidirán si abrir caso formal. Podés seguir el estado desde la tab "📥 Mis casos SOE".');
+    document.querySelector('.modal-overlay').remove();
+    await cargarMisCasosSoe();
+    if(tabActual === 'misCasosSoe') renderMisCasosSoe();
+  } catch(e){
+    console.error('Error enviando derivación:', e);
+    alert('❌ Error al enviar la derivación:\n\n' + (e.message || e));
+    if(btn){ btn.disabled = false; btn.textContent = '📤 Enviar al SOE'; }
+  }
+}
+
+// ─── Tab: Mis casos SOE ──────────────────────────────────────────────────────
+function renderMisCasosSoe(){
+  const el = document.getElementById('listaMisCasosSoe');
+  if(!el) return;
+
+  const filtroEst = document.getElementById('filtroEstadoMisCasosSoe')?.value || '';
+  const filtroArea = document.getElementById('filtroAreaMisCasosSoe')?.value || '';
+  let fils = misCasosSoe.slice();
+  if(filtroEst) fils = fils.filter(c => c.estado === filtroEst);
+  if(filtroArea) fils = fils.filter(c => c.area === filtroArea);
+
+  if(!fils.length){
+    el.innerHTML = `<div class="empty" style="padding:30px;text-align:center;color:#6b7280">
+      <div style="font-size:40px;margin-bottom:8px">📭</div>
+      <div><strong>No hay casos para mostrar</strong></div>
+      <div style="font-size:12px;margin-top:4px">${misCasosSoe.length === 0 ? 'Todavía no derivaste ningún alumno al SOE ni te sumaron a casos existentes.' : 'Ajustá los filtros para ver más.'}</div>
+    </div>`;
+    return;
+  }
+
+  let html = '<table><thead><tr><th>Alumno</th><th>Área</th><th>Prioridad</th><th>Estado</th><th>Última actualización</th><th style="width:80px"></th></tr></thead><tbody>';
+  fils.forEach(c => {
+    const al = (D.alumnos || alumnos || []).find(x => x.id === c.alumno_id);
+    const nombreAl = al ? al.nombre + ' · ' + al.grado : '(alumno)';
+    const est = ESTADOS_SOE[c.estado] || {label: c.estado, color: '#6b7280'};
+    const pri = PRIORIDADES_SOE[c.prioridad] || {label: c.prioridad, color: '#6b7280'};
+    const fecha = new Date(c.updated_at || c.created_at).toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    html += `<tr>
+      <td><strong>${escH(nombreAl)}</strong></td>
+      <td>${AREAS_SOE[c.area] || c.area}</td>
+      <td><span class="badge" style="background:${pri.color};color:#fff">${pri.label}</span></td>
+      <td><span class="badge" style="background:${est.color};color:#fff">${est.label}</span></td>
+      <td style="color:#6b7280;font-size:12px">${fecha}</td>
+      <td><button class="btn btn-outline btn-xs" onclick="abrirDetalleCasoSoe('${c.id}')">👁 Ver</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ─── Modal: Detalle de un caso SOE ───────────────────────────────────────────
+async function abrirDetalleCasoSoe(casoId){
+  const c = misCasosSoe.find(x => x.id === casoId);
+  if(!c){ alert('Caso no encontrado.'); return; }
+  const al = (D.alumnos || alumnos || []).find(x => x.id === c.alumno_id);
+  const nombreAl = al ? al.nombre + ' · ' + al.grado : '(alumno)';
+  const est = ESTADOS_SOE[c.estado] || {label: c.estado, color: '#6b7280'};
+  const pri = PRIORIDADES_SOE[c.prioridad] || {label: c.prioridad, color: '#6b7280'};
+
+  // Leer entradas del caso (RLS filtra: solo las visibles)
+  let entradas = [];
+  try {
+    const { data, error } = await sb.from('casos_soe_entradas')
+      .select('id, caso_id, fecha, tipo, participantes, descripcion, acuerdos, proxima_accion, proxima_fecha, registrado_por, registrado_en, visible_para_docente')
+      .eq('caso_id', casoId)
+      .order('registrado_en', { ascending: true });
+    if(error){ console.warn('Error leyendo entradas:', error.message); }
+    else entradas = data || [];
+  } catch(e){ console.warn(e); }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:720px;max-height:90vh;overflow-y:auto">
+      <div class="modal-head">
+        <h3>📥 Caso SOE — ${escH(nombreAl)}</h3>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#f3f4f6;padding:12px;border-radius:6px;margin-bottom:14px;font-size:13px">
+          <div><strong>Área:</strong> ${AREAS_SOE[c.area] || c.area}</div>
+          <div><strong>Estado:</strong> <span class="badge" style="background:${est.color};color:#fff">${est.label}</span> &nbsp; <strong>Prioridad:</strong> <span class="badge" style="background:${pri.color};color:#fff">${pri.label}</span></div>
+          <div><strong>Fecha apertura:</strong> ${new Date(c.fecha_apertura || c.created_at).toLocaleDateString('es-AR')}</div>
+          <div style="margin-top:6px"><strong>Motivo de apertura:</strong><br><span style="color:#374151">${escH(c.motivo_apertura || '')}</span></div>
+        </div>
+
+        <h4 style="margin:12px 0 8px;color:#374151">💬 Seguimiento del caso</h4>
+        <div style="font-size:11px;color:#6b7280;margin-bottom:10px">Solo ves las entradas que Dirección/Psicopedagoga eligieron compartir con vos.</div>
+
+        <div id="listaEntradasCaso" style="max-height:340px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:4px;padding:8px">
+          ${entradas.length === 0 ? '<div style="padding:20px;text-align:center;color:#6b7280;font-size:13px">Todavía no hay entradas compartidas en este caso.</div>' : entradas.map(ent => `
+            <div style="border-left:3px solid ${ent.visible_para_docente ? '#2e5e3f' : '#d97706'};padding:8px 12px;margin-bottom:8px;background:#fafafa;border-radius:4px">
+              <div style="font-size:11px;color:#6b7280">
+                ${new Date(ent.registrado_en || ent.fecha).toLocaleString('es-AR')} · ${escH(ent.tipo || 'observación')}
+              </div>
+              <div style="margin-top:4px;font-size:13px;line-height:1.5">${escH(ent.descripcion || '').replace(/\n/g,'<br>')}</div>
+              ${ent.acuerdos ? `<div style="margin-top:6px;font-size:12px;color:#374151"><strong>Acuerdos:</strong> ${escH(ent.acuerdos)}</div>` : ''}
+              ${ent.proxima_accion ? `<div style="font-size:12px;color:#374151"><strong>Próxima acción:</strong> ${escH(ent.proxima_accion)} ${ent.proxima_fecha ? '('+new Date(ent.proxima_fecha).toLocaleDateString('es-AR')+')' : ''}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        ${c.estado !== 'cerrado' ? `
+          <h4 style="margin:16px 0 8px;color:#374151">✏️ Agregar observación</h4>
+          <div style="background:#eff6ff;border-left:4px solid #1d3a5f;padding:8px 12px;border-radius:4px;margin-bottom:10px;font-size:12px;color:#1e3a5f">
+            Tu observación quedará automáticamente visible para Dirección y Psicopedagoga.
+          </div>
+          <div class="form-row">
+            <label>Tipo</label>
+            <select id="entTipo" class="input">
+              <option value="observacion_aula">Observación en el aula</option>
+              <option value="adaptacion_aplicada">Adaptación aplicada / resultado</option>
+              <option value="situacion_familiar">Situación familiar observada</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Descripción <span style="color:#a34434">*</span></label>
+            <textarea id="entDescripcion" class="input" rows="4" placeholder="Describí tu observación o el resultado de una medida aplicada."></textarea>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cerrar</button>
+            <button class="btn btn-pri" onclick="agregarEntradaCasoSoe('${casoId}')">✏️ Agregar</button>
+          </div>
+        ` : '<div class="modal-foot"><button class="btn btn-outline" onclick="this.closest(\'.modal-overlay\').remove()">Cerrar</button></div>'}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function agregarEntradaCasoSoe(casoId){
+  const tipo = document.getElementById('entTipo').value;
+  const descripcion = document.getElementById('entDescripcion').value.trim();
+  if(descripcion.length < 10){
+    alert('⚠ La descripción debe tener al menos 10 caracteres.');
+    return;
+  }
+  if(!sb){ alert('❌ Sin conexión.'); return; }
+
+  const btn = document.querySelector('.modal-overlay .btn-pri');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳...'; }
+
+  try {
+    const { error } = await sb.from('casos_soe_entradas').insert({
+      caso_id: casoId,
+      fecha: new Date().toISOString().slice(0,10),
+      tipo: tipo,
+      descripcion: descripcion,
+      registrado_por: usuarioActual.id,
+      registrado_en: new Date().toISOString(),
+      visible_para_docente: true
+    });
+    if(error) throw error;
+
+    alert('✓ Observación agregada al caso.');
+    document.querySelector('.modal-overlay').remove();
+    await cargarMisCasosSoe();
+    abrirDetalleCasoSoe(casoId);
+  } catch(e){
+    console.error(e);
+    alert('❌ Error:\n\n' + (e.message || e));
+    if(btn){ btn.disabled = false; btn.textContent = '✏️ Agregar'; }
+  }
+}
 
 // Ejecutar verificación de sesión al cargar la página
 window.addEventListener('load', verificarSesionAlCargar);
