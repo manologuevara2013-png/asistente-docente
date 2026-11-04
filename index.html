@@ -4580,7 +4580,7 @@ const PRIORIDADES_SOE = {
 
 // ─── Modal: Derivar al SOE ───────────────────────────────────────────────────
 function abrirModalDerivarSOE(alumnoId){
-  const al = (D.alumnos || alumnos || []).find(x => x.id === alumnoId);
+  const al = (alumnos || []).find(x => x.id === alumnoId);
   if(!al){ alert('Alumno no encontrado.'); return; }
   if(!esDocenteDerivador(al.grado)){
     alert('⛔ No tenés permiso para derivar este alumno al SOE.');
@@ -4653,7 +4653,7 @@ function abrirModalDerivarSOE(alumnoId){
 }
 
 async function enviarDerivacionSOE(alumnoId){
-  const al = (D.alumnos || alumnos || []).find(x => x.id === alumnoId);
+  const al = (alumnos || []).find(x => x.id === alumnoId);
   if(!al) return;
   const area = document.getElementById('derivArea').value;
   const prioridad = document.getElementById('derivPrioridad').value;
@@ -4731,7 +4731,7 @@ function renderMisCasosSoe(){
 
   let html = '<table><thead><tr><th>Alumno</th><th>Área</th><th>Prioridad</th><th>Estado</th><th>Última actualización</th><th style="width:80px"></th></tr></thead><tbody>';
   fils.forEach(c => {
-    const al = (D.alumnos || alumnos || []).find(x => x.id === c.alumno_id);
+    const al = (alumnos || []).find(x => x.id === c.alumno_id);
     const nombreAl = al ? al.nombre + ' · ' + al.grado : '(alumno)';
     const est = ESTADOS_SOE[c.estado] || {label: c.estado, color: '#6b7280'};
     const pri = PRIORIDADES_SOE[c.prioridad] || {label: c.prioridad, color: '#6b7280'};
@@ -4753,7 +4753,7 @@ function renderMisCasosSoe(){
 async function abrirDetalleCasoSoe(casoId){
   const c = misCasosSoe.find(x => x.id === casoId);
   if(!c){ alert('Caso no encontrado.'); return; }
-  const al = (D.alumnos || alumnos || []).find(x => x.id === c.alumno_id);
+  const al = (alumnos || []).find(x => x.id === c.alumno_id);
   const nombreAl = al ? al.nombre + ' · ' + al.grado : '(alumno)';
   const est = ESTADOS_SOE[c.estado] || {label: c.estado, color: '#6b7280'};
   const pri = PRIORIDADES_SOE[c.prioridad] || {label: c.prioridad, color: '#6b7280'};
