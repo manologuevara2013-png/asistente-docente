@@ -1618,7 +1618,14 @@ function borrarNotaEval(evalId, alId){
       delete ev._notaIds[alId];
       cerrarModalNotas(); abrirCargarNotas(evalId);
     } catch(e){ alert('❌ Error: ' + e.message); }
-  }, descB);
+  }, descB,
+  {
+    tabla: 'notas',
+    operacion: 'DELETE',
+    registro_id: (ev._notaIds && ev._notaIds[alId]) || ev.id,
+    datos_anterior: { nota: anterior, ausente: false },
+    datos_nuevo:    null
+  });
 }
 
 async function guardarNotaEval(evalId, alId, val){
@@ -1627,11 +1634,18 @@ async function guardarNotaEval(evalId, alId, val){
   const tieneAnterior = anterior !== undefined && anterior !== "" && anterior !== null;
   const nuevaNum = val === "" ? null : round2(parseFloat(val));
   if(tieneAnterior && String(nuevaNum) !== String(anterior)){
-    // Modificar nota existente → PIDE motivo y registra en notas_historial
+    // Modificar nota existente → PIDE motivo y registra en notas_historial + auditoria
     const al = alumnos.find(a => a.id === alId);
     accionProtegida(async () => {
       await persistirNota(ev, alId, nuevaNum, false, true, anterior);
-    }, `Modificar nota: ${al ? al.nombre : '?'} en ${ev.materia} - ${ev.subtipo || ev.descripcion || ''} (${anterior} → ${val})`);
+    }, `Modificar nota: ${al ? al.nombre : '?'} en ${ev.materia} - ${ev.subtipo || ev.descripcion || ''} (${anterior} → ${val})`,
+    {
+      tabla: 'notas',
+      operacion: 'UPDATE',
+      registro_id: (ev._notaIds && ev._notaIds[alId]) || ev.id,
+      datos_anterior: { nota: anterior, ausente: false },
+      datos_nuevo:    { nota: nuevaNum, ausente: false }
+    });
   } else {
     // Nota nueva o misma → directo, sin motivo
     await persistirNota(ev, alId, nuevaNum, false, false, anterior);
@@ -1652,7 +1666,14 @@ async function toggleAusente(evalId, alId, checked){
     const al = alumnos.find(a => a.id === alId);
     accionProtegida(async () => {
       await persistirNota(ev, alId, null, true, true, anteriorNota);
-    }, `Marcar ausente a: ${al ? al.nombre : '?'} en ${ev.materia} (tenía nota ${anteriorNota})`);
+    }, `Marcar ausente a: ${al ? al.nombre : '?'} en ${ev.materia} (tenía nota ${anteriorNota})`,
+    {
+      tabla: 'notas',
+      operacion: 'UPDATE',
+      registro_id: (ev._notaIds && ev._notaIds[alId]) || ev.id,
+      datos_anterior: { nota: anteriorNota, ausente: false },
+      datos_nuevo:    { nota: null, ausente: true }
+    });
   } else {
     await persistirNota(ev, alId, null, checked, false, anteriorNota);
   }
@@ -3196,7 +3217,7 @@ function renderAuditoriaTabla(){
       <th style="padding:6px 8px;text-align:left">Motivo</th>
     </tr></thead><tbody>`;
   auditoriaCache.forEach(r => {
-    const fh = r.fecha ? new Date(r.fecha).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : '';
+    const fh = r.fecha ? new Date(r.fecha.endsWith('Z') || r.fecha.includes('+') ? r.fecha : r.fecha + 'Z').toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : '';
     const appBadge = r.app === 'gei'
       ? '<span style="background:#cfe2ff;color:#084298;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">GEI</span>'
       : r.app === 'convivencia'
@@ -3221,7 +3242,7 @@ function exportarAuditoria(){
   const wb = XLSX.utils.book_new();
   const rows = [["Fecha", "Hora", "App", "Tabla", "Operación", "Usuario", "Motivo", "Registro ID"]];
   auditoriaCache.forEach(r => {
-    const d = r.fecha ? new Date(r.fecha) : null;
+    const d = r.fecha ? new Date(r.fecha.endsWith('Z') || r.fecha.includes('+') ? r.fecha : r.fecha + 'Z') : null;
     rows.push([
       d ? d.toLocaleDateString('es-AR') : '',
       d ? d.toLocaleTimeString('es-AR') : '',
@@ -3246,7 +3267,7 @@ function exportarAuditoriaPDF(){
   const app = document.getElementById('auditoriaApp')?.value || 'todo';
   let filas = '';
   auditoriaCache.forEach(r => {
-    const d = r.fecha ? new Date(r.fecha).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : '';
+    const d = r.fecha ? new Date(r.fecha.endsWith('Z') || r.fecha.includes('+') ? r.fecha : r.fecha + 'Z').toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : '';
     filas += `<tr>
       <td>${d}</td><td>${escH(r.app||'')}</td><td>${escH(r.tabla||'')}</td>
       <td>${escH(r.operacion||'')}</td><td>${escH(r.usuario_nombre||'')}</td>
